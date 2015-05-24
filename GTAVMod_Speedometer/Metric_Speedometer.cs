@@ -1,7 +1,7 @@
 ﻿/*
  * Simple Metric/Imperial Speedometer
  * Author: libertylocked
- * Version: 2.0.4
+ * Version: 2.0.4b
  * License: GPLv2
  */
 using System;
@@ -23,7 +23,7 @@ namespace GTAVMod_Speedometer
     public class Metric_Speedometer : Script
     {
         // Constants
-        public const string SCRIPT_VERSION = "2.0.4";
+        public const string SCRIPT_VERSION = "2.0.4b";
         const string URL_VERSIONFILE = @"https://raw.githubusercontent.com/LibertyLocked/GTAVMod_Speedometer/release/GTAVMod_Speedometer/version.txt"; // latest ver text
         const int NUM_FONTS = 8;
         const float RAINBOW_FRAMETIME = 0.034f;
