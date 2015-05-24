@@ -1,7 +1,7 @@
 ﻿/*
  * Simple Metric/Imperial Speedometer
  * Author: libertylocked
- * Version: 2.0.4a
+ * Version: 2.0.4
  * License: GPLv2
  */
 using System;
@@ -23,27 +23,34 @@ namespace GTAVMod_Speedometer
     public class Metric_Speedometer : Script
     {
         // Constants
-        const string SCRIPT_VERSION = "2.0.4a";
-        const string URL_VERSIONFILE = @"https://raw.githubusercontent.com/LibertyLocked/GTAVMod_Speedometer/release/GTAVMod_Speedometer/version.txt"; // it's just a txt, chill out people
+        public const string SCRIPT_VERSION = "2.0.4";
+        const string URL_VERSIONFILE = @"https://raw.githubusercontent.com/LibertyLocked/GTAVMod_Speedometer/release/GTAVMod_Speedometer/version.txt"; // latest ver text
         const int NUM_FONTS = 8;
+        const float RAINBOW_FRAMETIME = 0.034f;
 
         #region Fields
+
         bool creditsShown = false;
         UIContainer speedContainer, odometerContainer;
         UIText speedText, odometerText;
         SpeedoMode speedoMode;
         float distanceKm = 0;
+        int rainbowHueBp = 0; // 0 to 10000
+        float rainbowTimeCounter = 0;
+        bool updateChecking = false, updateChecked = false;
+        string updateCheckResult;
 
         ScriptSettings settings;
         bool enableMenu;
         Keys menuKey;
         bool enableSaving;
         bool useMph;
+        int rainbowMode = 0;
 
         // Fields for menus
         MySettingsMenu mainMenu;
-        GTA.Menu coreMenu, dispMenu, colorMenu;
-        GTA.MenuItem[] mainMenuItems, coreMenuItems, dispMenuItems, colorMenuItems;
+        GTA.Menu coreMenu, dispMenu, colorMenu, extrasMenu;
+        GTA.MenuItem[] mainMenuItems, coreMenuItems, dispMenuItems, colorMenuItems, extrasMenuItems;
         bool isChangingBackcolor;
 
         // Fields for UI settings
@@ -86,18 +93,37 @@ namespace GTAVMod_Speedometer
                 if (isPausePressed) SaveStats();
             }
 
+            if (updateChecked)
+            {
+                updateChecked = false;
+                UI.Notify(updateCheckResult);
+            }
+
             Player player = Game.Player;
             if (player != null && player.CanControlCharacter && player.IsAlive && player.Character != null)
             {
-                if (player.Character.IsInVehicle())
+                // update and draw
+                if (player.Character.IsInVehicle() || IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
                 {
-                    Update(player.Character.CurrentVehicle.Speed);
+                    float speed = 0;
+                    if (player.Character.IsInVehicle()) speed = player.Character.CurrentVehicle.Speed;
+                    else if (IsPlayerRidingDeer(player.Character)) speed = GetEntitySpeed(player.Character);
+
+                    Update(speed);
                     Draw();
-                }
-                else if (IsPlayerRidingDeer(player.Character))
-                {
-                    Update(GetEntitySpeed(player.Character));
-                    Draw();
+
+                    // update rainbow
+                    if (rainbowMode != 0)
+                    {
+                        rainbowTimeCounter += Game.LastFrameTime;
+                        if (rainbowTimeCounter > RAINBOW_FRAMETIME)
+                        {
+                            rainbowTimeCounter = 0;
+                            rainbowHueBp = (rainbowHueBp + (int)(1 * Math.Pow(2, rainbowMode - 1) * speed)) % 10000;
+                            Color rColor = HSL2RGB((double)rainbowHueBp / 10000, 1, 0.5);
+                            speedText.Color = Color.FromArgb(forecolor.A, rColor.R, rColor.G, rColor.B);
+                        }
+                    }
                 }
             }
         }
@@ -168,6 +194,7 @@ namespace GTAVMod_Speedometer
                 if (enableMenu)
                     this.menuKey = (Keys)Enum.Parse(typeof(Keys), settings.GetValue("Core", "MenuKey"), true);
                 this.enableSaving = settings.GetValue("Core", "EnableSaving", true);
+                this.rainbowMode = settings.GetValue("Core", "RainbowMode", 0);
 
                 // Parse UI settings
                 this.vAlign = (VerticalAlignment)Enum.Parse(typeof(VerticalAlignment), settings.GetValue("UI", "VertAlign"), true);
@@ -251,18 +278,15 @@ namespace GTAVMod_Speedometer
             MenuButton btnClear = new MenuButton("Reset Odometer", delegate { distanceKm = 0; UI.Notify("Odometer reset"); });
             MenuButton btnCore = new MenuButton("Core Settings >", delegate { View.AddMenu(coreMenu); });
             MenuButton btnDisp = new MenuButton("Display Settings >", delegate { View.AddMenu(dispMenu); });
-            MenuButton btnExtra = new MenuButton("Extras >", delegate
-                {
-                    MenuButton btnShowCredits = new MenuButton("Show Credits", ShowCredits);
-                    MenuButton btnUpdates = new MenuButton("Check for Updates", CheckForUpdates);
-                    GTA.Menu extraMenu = new GTA.Menu("Extras", new GTA.MenuItem[] { btnShowCredits, btnUpdates });
-                    extraMenu.HasFooter = false;
-                    View.AddMenu(extraMenu);
+            MenuButton btnExtras = new MenuButton("Extras >", delegate { View.AddMenu(extrasMenu); });
+            MenuButton btnReload = new MenuButton("Reload", delegate 
+                { 
+                    ParseSettings(); SetupUIElements();
+                    UpdateMainButtons(5); UpdateCoreButtons(0); UpdateDispButtons(0); UpdateColorButtons(0); UpdateExtrasButtons(0);
+                    UI.Notify("Speedometer reloaded"); 
                 });
-            MenuButton btnReload = new MenuButton("Reload", delegate { ParseSettings(); SetupUIElements(); UI.Notify("Speedometer reloaded"); 
-                UpdateMainButtons(5); UpdateCoreButtons(0); UpdateDispButtons(0); UpdateColorButtons(0); });
             MenuButton btnBack = new MenuButton("Save & Exit", delegate { View.CloseAllMenus(); });
-            mainMenuItems = new GTA.MenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtra, btnReload, btnBack };
+            this.mainMenuItems = new GTA.MenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack };
             this.mainMenu = new MySettingsMenu("Speedometer v" + SCRIPT_VERSION, mainMenuItems, this);
             this.mainMenu.HasFooter = false;
 
@@ -270,7 +294,7 @@ namespace GTAVMod_Speedometer
             MenuButton btnUseMph = new MenuButton("", delegate { useMph = !useMph; UpdateCoreButtons(0); });
             MenuButton btnEnableSaving = new MenuButton("", delegate { enableSaving = !enableSaving; UpdateCoreButtons(1); });
             //MenuButton btnEnableMenu = new MenuButton("Disable Menu Key", delegate { enableMenu = !enableMenu; UpdateCoreButtons(2); });
-            coreMenuItems = new GTA.MenuItem[] { btnUseMph, btnEnableSaving };
+            this.coreMenuItems = new GTA.MenuItem[] { btnUseMph, btnEnableSaving };
             this.coreMenu = new GTA.Menu("Core Settings", coreMenuItems);
             this.coreMenu.HasFooter = false;
 
@@ -310,7 +334,7 @@ namespace GTAVMod_Speedometer
             MenuButton btnBackcolor = new MenuButton("Back Color >", delegate { isChangingBackcolor = true; UpdateColorButtons(0); View.AddMenu(colorMenu); });
             MenuButton btnForecolor = new MenuButton("Fore Color >", delegate { isChangingBackcolor = false; UpdateColorButtons(0); View.AddMenu(colorMenu); });
             MenuButton btnRstDefault = new MenuButton("Restore to Default", delegate { ResetUIToDefault(); UpdateDispButtons(8); });
-            dispMenuItems = new GTA.MenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
+            this.dispMenuItems = new GTA.MenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
             this.dispMenu = new GTA.Menu("Display Settings", dispMenuItems);
             this.dispMenu.HasFooter = false;
 
@@ -363,23 +387,31 @@ namespace GTAVMod_Speedometer
                     else forecolor = IncrementARGB(forecolor, -5, 0, 0, 0);
                     SetupUIElements(); UpdateColorButtons(7);
                 });
-            colorMenuItems = new GTA.MenuItem[] { btnAddR, btnSubR, btnAddG, btnSubG, btnAddB, btnSubB, btnAddA, btnSubA };
+            this.colorMenuItems = new GTA.MenuItem[] { btnAddR, btnSubR, btnAddG, btnSubG, btnAddB, btnSubB, btnAddA, btnSubA };
             this.colorMenu = new GTA.Menu("", colorMenuItems);
             this.colorMenu.HasFooter = false;
             this.colorMenu.HeaderHeight += 20;
 
+            // Create extras menu
+            MenuButton btnRainbowMode = new MenuButton("", delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); });
+            MenuButton btnShowCredits = new MenuButton("Show Credits", ShowCredits);
+            MenuButton btnUpdates = new MenuButton("Check for Updates", CheckForUpdates);
+            this.extrasMenuItems = new GTA.MenuItem[] { btnRainbowMode, btnShowCredits, btnUpdates };
+            this.extrasMenu = new GTA.Menu("Extras", extrasMenuItems);
+            this.extrasMenu.HasFooter = false;
+            
+            
             UpdateMainButtons(0);
             UpdateCoreButtons(0);
             UpdateDispButtons(0);
             UpdateColorButtons(0);
+            UpdateExtrasButtons(0);
         }
 
         void UpdateMainButtons(int selectedIndex)
         {
-            mainMenuItems[0].Caption = "Toggle Display: " + speedoMode.ToString(); // toggle button's caption
-            mainMenu.Initialize(); // reinit main menu
-            for (int i = 0; i < selectedIndex; i++)
-                mainMenu.OnChangeSelection(true);
+            mainMenuItems[0].Caption = "Toggle Display: " + speedoMode.ToString();
+            ChangeMenuSelectedIndex(mainMenu, selectedIndex);
         }
 
         void UpdateCoreButtons(int selectedIndex)
@@ -387,9 +419,7 @@ namespace GTAVMod_Speedometer
             coreMenuItems[0].Caption = "Speed Unit: " + (useMph ? "Imperial" : "Metric");
             coreMenuItems[1].Caption = "Save Odometer: " + (enableSaving ? "On" : "Off");
             //coreMenuItems[2].Caption = "Enable Menu Key: " + enableMenu;
-            coreMenu.Initialize(); // reinit core menu
-            for (int i = 0; i < selectedIndex; i++)
-                coreMenu.OnChangeSelection(true);
+            ChangeMenuSelectedIndex(coreMenu, selectedIndex);
         }
 
         void UpdateDispButtons(int selectedIndex)
@@ -397,9 +427,7 @@ namespace GTAVMod_Speedometer
             dispMenuItems[0].Caption = "Vertical: " + System.Enum.GetName(typeof(VerticalAlignment), vAlign);
             dispMenuItems[1].Caption = "Horizontal: " + System.Enum.GetName(typeof(HorizontalAlign), hAlign);
             dispMenuItems[2].Caption = "Font Style: " + fontStyle;
-            dispMenu.Initialize(); // reinit disp menu
-            for (int i = 0; i < selectedIndex; i++)
-                dispMenu.OnChangeSelection(true);
+            ChangeMenuSelectedIndex(dispMenu, selectedIndex);
         }
 
         void UpdateColorButtons(int selectedIndex)
@@ -407,9 +435,20 @@ namespace GTAVMod_Speedometer
             Color color = isChangingBackcolor ? backcolor : forecolor;
             colorMenu.Caption = (isChangingBackcolor ? "Back Color" : "Fore Color") 
                 + "\nR: " + color.R + " G: " + color.G + " B: " + color.B + " A: " + color.A;
-            colorMenu.Initialize(); // reinit color menu
+            ChangeMenuSelectedIndex(colorMenu, selectedIndex);
+        }
+
+        void UpdateExtrasButtons(int selectedIndex)
+        {
+            extrasMenuItems[0].Caption = "Rainbow Mode: " + (rainbowMode == 0 ? "Off" : Math.Pow(2, rainbowMode - 1) + "x");
+            ChangeMenuSelectedIndex(extrasMenu, selectedIndex);
+        }
+
+        void ChangeMenuSelectedIndex(GTA.Menu menu, int selectedIndex)
+        {
+            menu.Initialize();
             for (int i = 0; i < selectedIndex; i++)
-                colorMenu.OnChangeSelection(true);
+                menu.OnChangeSelection(true);
         }
 
         void LoadStats()
@@ -436,53 +475,14 @@ namespace GTAVMod_Speedometer
 
         void ThreadProc_DoSaveStats()
         {
-            using (StreamWriter sw = new StreamWriter((@".\scripts\Metric_Speedometer_Stats.txt"), false))
-            {
-                sw.WriteLine(distanceKm);
-            }
-        }
-
-        float GetEntitySpeed(Entity entity)
-        {
             try
             {
-                float speed = Function.Call<float>(Hash.GET_ENTITY_SPEED, entity);
-                return speed;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
-        bool IsPlayerRidingDeer(Ped playerPed)
-        {
-            try
-            {
-                Ped attached = Function.Call<Ped>(Hash.GET_ENTITY_ATTACHED_TO, playerPed);
-                if (attached != null)
+                using (StreamWriter sw = new StreamWriter((@".\scripts\Metric_Speedometer_Stats.txt"), false))
                 {
-                    PedHash attachedHash = (PedHash)attached.Model.Hash;
-                    return (attachedHash == PedHash.Deer);
+                    sw.WriteLine(distanceKm);
                 }
-                else
-                    return false;
             }
-            catch
-            {
-                return false;
-            }
-        }
-
-        float KmToMiles(float km)
-        {
-            return km * 0.6213711916666667f;
-        }
-
-        Color IncrementARGB(Color color, int da, int dr, int dg, int db)
-        {
-            return Color.FromArgb(Math.Max(Math.Min(color.A + da, 255), 0), Math.Max(Math.Min(color.R + dr, 255), 0),
-                Math.Max(Math.Min(color.G + dg, 255), 0), Math.Max(Math.Min(color.B + db, 255), 0));
+            catch { }
         }
 
         void ShowCredits()
@@ -492,6 +492,18 @@ namespace GTAVMod_Speedometer
 
         void CheckForUpdates()
         {
+            if (updateChecking) return;
+            try
+            {
+                Thread thread = new Thread(ThreadProc_DoCheckForUpdates);
+                thread.Start();
+                updateChecking = true;
+            }
+            catch { }
+        }
+
+        void ThreadProc_DoCheckForUpdates()
+        {
             try
             {
                 WebClient client = new WebClient();
@@ -499,13 +511,18 @@ namespace GTAVMod_Speedometer
                 Stream stream = client.OpenRead(URL_VERSIONFILE);
                 StreamReader reader = new StreamReader(stream);
                 string latestVer = reader.ReadToEnd();
-                if (SCRIPT_VERSION == latestVer) UI.Notify("~g~Speedometer is up to date");
-                else UI.Notify("~y~New version is available on gta5-mods.com");
+                if (SCRIPT_VERSION == latestVer) updateCheckResult = "~g~Speedometer is up to date";
+                else updateCheckResult = "~y~New version is available on gta5-mods.com";
             }
-            catch { UI.Notify("~r~failed to check for updates"); }
+            catch { updateCheckResult = "~r~failed to check for updates"; }
+
+            updateChecking = false;
+            updateChecked = true;
         }
 
         #endregion
+
+        #region Public methods
 
         public void SaveSettings()
         {
@@ -515,6 +532,7 @@ namespace GTAVMod_Speedometer
                 settings.SetValue("Core", "UseMph", useMph.ToString());
                 settings.SetValue("Core", "DisplayMode", (int)speedoMode);
                 settings.SetValue("Core", "EnableSaving", enableSaving.ToString());
+                settings.SetValue("Core", "RainbowMode", rainbowMode);
                 settings.SetValue("UI", "VertAlign", Enum.GetName(typeof(VerticalAlignment), vAlign));
                 settings.SetValue("UI", "HorzAlign", Enum.GetName(typeof(HorizontalAlign), hAlign));
                 settings.SetValue("UI", "OffsetX", posOffset.X);
@@ -536,6 +554,117 @@ namespace GTAVMod_Speedometer
             }
             catch { UI.Notify("~r~failed to save speedometer config"); }
         }
+
+        #endregion
+
+        #region Static methods
+
+        static float KmToMiles(float km)
+        {
+            return km * 0.6213711916666667f;
+        }
+
+        static float GetEntitySpeed(Entity entity)
+        {
+            try
+            {
+                float speed = Function.Call<float>(Hash.GET_ENTITY_SPEED, entity);
+                return speed;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        static bool IsPlayerRidingDeer(Ped playerPed)
+        {
+            try
+            {
+                Ped attached = Function.Call<Ped>(Hash.GET_ENTITY_ATTACHED_TO, playerPed);
+                if (attached != null)
+                {
+                    PedHash attachedHash = (PedHash)attached.Model.Hash;
+                    return (attachedHash == PedHash.Deer);
+                }
+                else
+                    return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        static Color IncrementARGB(Color color, int dA, int dR, int dG, int dB)
+        {
+            return Color.FromArgb(Math.Max(Math.Min(color.A + dA, 255), 0), Math.Max(Math.Min(color.R + dR, 255), 0),
+                Math.Max(Math.Min(color.G + dG, 255), 0), Math.Max(Math.Min(color.B + dB, 255), 0));
+        }
+
+        public static Color HSL2RGB(double h, double sl, double l)
+        {
+            double v;
+            double r, g, b;
+            r = l;
+            g = l;
+            b = l;
+            v = (l <= 0.5) ? (l * (1.0 + sl)) : (l + sl - l * sl);
+            if (v > 0)
+            {
+                double m;
+                double sv;
+                int sextant;
+                double fract, vsf, mid1, mid2;
+                m = l + l - v;
+                sv = (v - m) / v;
+                h *= 6.0;
+                sextant = (int)h;
+                fract = h - sextant;
+                vsf = v * sv * fract;
+                mid1 = m + vsf;
+                mid2 = v - vsf;
+                switch (sextant)
+                {
+                    case 0:
+                        r = v;
+                        g = mid1;
+                        b = m;
+                        break;
+                    case 1:
+                        r = mid2;
+                        g = v;
+                        b = m;
+                        break;
+                    case 2:
+                        r = m;
+                        g = v;
+                        b = mid1;
+                        break;
+                    case 3:
+                        r = m;
+                        g = mid2;
+                        b = v;
+                        break;
+                    case 4:
+                        r = mid1;
+                        g = m;
+                        b = v;
+                        break;
+                    case 5:
+                        r = v;
+                        g = m;
+                        b = mid2;
+                        break;
+                }
+            }
+            int colorR = Math.Min(Convert.ToInt32(r * 255.0f), 255);
+            int colorG = Math.Min(Convert.ToInt32(g * 255.0f), 255);
+            int colorB = Math.Min(Convert.ToInt32(b * 255.0f), 255);
+            return Color.FromArgb(colorR, colorG, colorB);
+        }
+
+        #endregion
     }
 
     class MySettingsMenu : GTA.Menu
