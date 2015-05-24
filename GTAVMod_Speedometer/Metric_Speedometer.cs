@@ -2,6 +2,7 @@
  * Simple Metric/Imperial Speedometer
  * Author: libertylocked
  * Version: 2.0.4a
+ * License: GPLv2
  */
 using System;
 using System.Collections.Generic;
