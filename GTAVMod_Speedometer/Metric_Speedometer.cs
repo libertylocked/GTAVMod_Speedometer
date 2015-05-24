@@ -37,7 +37,7 @@ namespace GTAVMod_Speedometer
         float distanceKm = 0;
         int rainbowHueBp = 0; // 0 to 10000
         float rainbowTimeCounter = 0;
-        bool updateChecking = false, updateChecked = false;
+        UpdateCheckStatus updateCheckStatus;
         string updateCheckResult;
 
         ScriptSettings settings;
@@ -93,9 +93,9 @@ namespace GTAVMod_Speedometer
                 if (isPausePressed) SaveStats();
             }
 
-            if (updateChecked)
+            if (updateCheckStatus == UpdateCheckStatus.Checked)
             {
-                updateChecked = false;
+                updateCheckStatus = UpdateCheckStatus.Stopped;
                 UI.Notify(updateCheckResult);
             }
 
@@ -492,12 +492,12 @@ namespace GTAVMod_Speedometer
 
         void CheckForUpdates()
         {
-            if (updateChecking) return;
+            if (updateCheckStatus != UpdateCheckStatus.Stopped) return;
             try
             {
                 Thread thread = new Thread(ThreadProc_DoCheckForUpdates);
                 thread.Start();
-                updateChecking = true;
+                updateCheckStatus = UpdateCheckStatus.Checking;
             }
             catch { }
         }
@@ -516,8 +516,7 @@ namespace GTAVMod_Speedometer
             }
             catch { updateCheckResult = "~r~failed to check for updates"; }
 
-            updateChecking = false;
-            updateChecked = true;
+            updateCheckStatus = UpdateCheckStatus.Stopped;
         }
 
         #endregion
@@ -689,6 +688,13 @@ namespace GTAVMod_Speedometer
         Off = 0,
         Simple = 1,
         Detailed = 2,
+    }
+
+    enum UpdateCheckStatus
+    {
+        Stopped = 0,
+        Checking = 1,
+        Checked = 2,
     }
 
     #region INI File class
