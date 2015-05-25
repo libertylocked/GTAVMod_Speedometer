@@ -11,8 +11,8 @@ Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN custom
 1. Functional speedometer 
 2. Configurable interface (position, font, color, opacity, etc) 
 3. Ingame menu to visually adjust settings. Keybind editable (default F7) 
-4. (Optional) Resettable odometer 
-5. Shows speed when riding deer with [Ride A Deer](https://www.gta5-mods.com/scripts/ride-a-deer) 
+5. Includes 0-100kph(62mph) timer, max speed recorder
+6. Shows speed when riding deer with [Ride A Deer](https://www.gta5-mods.com/scripts/ride-a-deer) 
 
 ##REQUIREMENTS: 
 1. [ScriptHookV](http://gtaforums.com/topic/788343-vrel-script-hook-v/)
@@ -31,6 +31,7 @@ Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN custom
 4. The speedometer still won't show up? Check the ScriptHookVDotNet.log in game root directory and paste me the related logs.
 
 ##CHANGELOG SINCE 2.0: 
+- v2.1.0: Added 0-100kph(62mph) timer and max speed recorder
 - v2.0.3: Fixed "Reload" and "Restore to Default" buttons.
 - v2.0.2: Added "Font Style" to display settings.
 - v2.0.1: Fixed incorrect text for opacity. Fixed config saving with certain parameters.
