@@ -35,10 +35,13 @@ namespace GTAVMod_Speedometer
         UIText speedText, odometerText;
         SpeedoMode speedoMode;
         float distanceKm = 0;
+        Vector3 prevPos;
         int rainbowHueBp = 0; // 0 to 10000
         float rainbowTimeCounter = 0;
-        UpdateCheckStatus updateCheckStatus;
+        UpdateCheckState updateCheckState;
         string updateCheckResult;
+        AccelerationTimerWidget wid_accTimer;
+        MaxSpeedWidget wid_maxSpeed;
 
         ScriptSettings settings;
         bool enableMenu;
@@ -80,6 +83,9 @@ namespace GTAVMod_Speedometer
             this.View.MenuTransitions = false; // because transition looksnice/doesnotlooknice
             this.Tick += OnTick;
             this.KeyDown += OnKeyDown;
+
+            this.wid_accTimer = new AccelerationTimerWidget();
+            this.wid_maxSpeed = new MaxSpeedWidget();
         }
 
         #region Event handles
@@ -93,9 +99,9 @@ namespace GTAVMod_Speedometer
                 if (isPausePressed) SaveStats();
             }
 
-            if (updateCheckStatus == UpdateCheckStatus.Checked)
+            if (updateCheckState == UpdateCheckState.Checked)
             {
-                updateCheckStatus = UpdateCheckStatus.Stopped;
+                updateCheckState = UpdateCheckState.Stopped;
                 UI.Notify(updateCheckResult);
             }
 
@@ -105,12 +111,18 @@ namespace GTAVMod_Speedometer
                 // update and draw
                 if (player.Character.IsInVehicle() || IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
                 {
+                    // in veh or riding deer
                     float speed = 0;
                     if (player.Character.IsInVehicle()) speed = player.Character.CurrentVehicle.Speed;
-                    else if (IsPlayerRidingDeer(player.Character)) speed = GetEntitySpeed(player.Character);
+                    else if (IsPlayerRidingDeer(player.Character)) speed = GetSpeedFromPosChange(player.Character);
 
                     Update(speed);
                     Draw();
+
+                    wid_accTimer.Update(speed);
+                    wid_accTimer.Draw();
+                    wid_maxSpeed.Update(speed);
+                    wid_maxSpeed.Draw(useMph);
 
                     // update rainbow
                     if (rainbowMode != 0)
@@ -120,12 +132,20 @@ namespace GTAVMod_Speedometer
                         {
                             rainbowTimeCounter = 0;
                             rainbowHueBp = (rainbowHueBp + (int)(1 * Math.Pow(2, rainbowMode - 1) * speed)) % 10000;
-                            Color rColor = HSL2RGB((double)rainbowHueBp / 10000, 1, 0.5);
-                            speedText.Color = Color.FromArgb(forecolor.A, rColor.R, rColor.G, rColor.B);
+                            speedText.Color = HSLA2RGBA((double)rainbowHueBp / 10000, 1, 0.5, forecolor.A / 255.0);
                         }
                     }
                 }
+                else
+                {
+                    // not in veh, not riding deer
+                    if (wid_accTimer.State != AccelerationTimerState.Off) wid_accTimer.Stop();
+                    if (wid_maxSpeed.State != MaxSpeedState.Off) wid_maxSpeed.Stop();
+                }
             }
+
+            if (player != null && player.Character != null)
+                prevPos = Game.Player.Character.Position;
         }
 
         void OnKeyDown(object sender, KeyEventArgs e)
@@ -148,7 +168,7 @@ namespace GTAVMod_Speedometer
 
         void Update(float speedThisFrame)
         {
-            float speedKph = speedThisFrame * 3600 / 1000; // convert from m/s to km/h
+            float speedKph = MsToKmh(speedThisFrame); // convert from m/s to km/h
             float distanceLastFrame = speedThisFrame * Game.LastFrameTime / 1000; // increment odometer counter
             distanceKm += distanceLastFrame;
 
@@ -156,7 +176,7 @@ namespace GTAVMod_Speedometer
             {
                 float speedMph = KmToMiles(speedKph);
                 float distanceMiles = KmToMiles(distanceKm);
-                speedText.Caption = Math.Floor(speedMph).ToString("0") + " mph"; // floor speed mph
+                speedText.Caption = Math.Floor(speedMph).ToString("0 mph"); // floor speed mph
                 if (speedoMode == SpeedoMode.Detailed)
                 {
                     double truncated = Math.Floor(distanceMiles * 10) / 10.0;
@@ -165,11 +185,11 @@ namespace GTAVMod_Speedometer
             }
             else
             {
-                speedText.Caption = Math.Floor(speedKph).ToString("0") + " km/h"; // floor speed km/h
+                speedText.Caption = Math.Floor(speedKph).ToString("0 km/h"); // floor speed km/h
                 if (speedoMode == SpeedoMode.Detailed)
                 {
                     double truncated = Math.Floor(distanceKm * 10) / 10.0;
-                    odometerText.Caption = truncated.ToString("0.0") + " km";
+                    odometerText.Caption = truncated.ToString("0.0 km");
                 }
             }
         }
@@ -291,7 +311,7 @@ namespace GTAVMod_Speedometer
             this.mainMenu.HasFooter = false;
 
             // Create core menu
-            MenuButton btnUseMph = new MenuButton("", delegate { useMph = !useMph; UpdateCoreButtons(0); });
+            MenuButton btnUseMph = new MenuButton("", delegate { useMph = !useMph; UpdateCoreButtons(0); UpdateExtrasButtons(0); });
             MenuButton btnEnableSaving = new MenuButton("", delegate { enableSaving = !enableSaving; UpdateCoreButtons(1); });
             //MenuButton btnEnableMenu = new MenuButton("Disable Menu Key", delegate { enableMenu = !enableMenu; UpdateCoreButtons(2); });
             this.coreMenuItems = new GTA.MenuItem[] { btnUseMph, btnEnableSaving };
@@ -394,9 +414,11 @@ namespace GTAVMod_Speedometer
 
             // Create extras menu
             MenuButton btnRainbowMode = new MenuButton("", delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); });
+            MenuButton btnAccTimer = new MenuButton("0-100kph Timer", delegate { wid_accTimer.Toggle(); });
+            MenuButton btnMaxSpeed = new MenuButton("Max Speed Recorder", delegate { wid_maxSpeed.Toggle(); });
             MenuButton btnShowCredits = new MenuButton("Show Credits", ShowCredits);
             MenuButton btnUpdates = new MenuButton("Check for Updates", CheckForUpdates);
-            this.extrasMenuItems = new GTA.MenuItem[] { btnRainbowMode, btnShowCredits, btnUpdates };
+            this.extrasMenuItems = new GTA.MenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates };
             this.extrasMenu = new GTA.Menu("Extras", extrasMenuItems);
             this.extrasMenu.HasFooter = false;
             
@@ -441,6 +463,7 @@ namespace GTAVMod_Speedometer
         void UpdateExtrasButtons(int selectedIndex)
         {
             extrasMenuItems[0].Caption = "Rainbow Mode: " + (rainbowMode == 0 ? "Off" : Math.Pow(2, rainbowMode - 1) + "x");
+            extrasMenuItems[1].Caption = (useMph ? "0-62 mph" : "0-100 kph") + " Timer";
             ChangeMenuSelectedIndex(extrasMenu, selectedIndex);
         }
 
@@ -492,14 +515,14 @@ namespace GTAVMod_Speedometer
 
         void CheckForUpdates()
         {
-            if (updateCheckStatus != UpdateCheckStatus.Stopped) return;
+            if (updateCheckState != UpdateCheckState.Stopped) return;
             try
             {
                 Thread thread = new Thread(ThreadProc_DoCheckForUpdates);
                 thread.Start();
-                updateCheckStatus = UpdateCheckStatus.Checking;
+                updateCheckState = UpdateCheckState.Checking;
             }
-            catch { }
+            catch { updateCheckResult = "~r~failed to check for updates"; }
         }
 
         void ThreadProc_DoCheckForUpdates()
@@ -516,7 +539,13 @@ namespace GTAVMod_Speedometer
             }
             catch { updateCheckResult = "~r~failed to check for updates"; }
 
-            updateCheckStatus = UpdateCheckStatus.Stopped;
+            updateCheckState = UpdateCheckState.Checked;
+        }
+
+        float GetSpeedFromPosChange(Entity entity)
+        {
+            float distance = entity.Position.DistanceTo(prevPos);
+            return distance / Game.LastFrameTime;
         }
 
         #endregion
@@ -558,25 +587,17 @@ namespace GTAVMod_Speedometer
 
         #region Static methods
 
-        static float KmToMiles(float km)
+        public static float MsToKmh(float mPerS)
+        {
+            return mPerS * 3600 / 1000;
+        }
+
+        public static float KmToMiles(float km)
         {
             return km * 0.6213711916666667f;
         }
 
-        static float GetEntitySpeed(Entity entity)
-        {
-            try
-            {
-                float speed = Function.Call<float>(Hash.GET_ENTITY_SPEED, entity);
-                return speed;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
-        static bool IsPlayerRidingDeer(Ped playerPed)
+        public static bool IsPlayerRidingDeer(Ped playerPed)
         {
             try
             {
@@ -595,13 +616,13 @@ namespace GTAVMod_Speedometer
             }
         }
 
-        static Color IncrementARGB(Color color, int dA, int dR, int dG, int dB)
+        public static Color IncrementARGB(Color color, int dA, int dR, int dG, int dB)
         {
             return Color.FromArgb(Math.Max(Math.Min(color.A + dA, 255), 0), Math.Max(Math.Min(color.R + dR, 255), 0),
                 Math.Max(Math.Min(color.G + dG, 255), 0), Math.Max(Math.Min(color.B + dB, 255), 0));
         }
 
-        public static Color HSL2RGB(double h, double sl, double l)
+        public static Color HSLA2RGBA(double h, double sl, double l, double a)
         {
             double v;
             double r, g, b;
@@ -660,7 +681,8 @@ namespace GTAVMod_Speedometer
             int colorR = Math.Min(Convert.ToInt32(r * 255.0f), 255);
             int colorG = Math.Min(Convert.ToInt32(g * 255.0f), 255);
             int colorB = Math.Min(Convert.ToInt32(b * 255.0f), 255);
-            return Color.FromArgb(colorR, colorG, colorB);
+            int colorA = Math.Min(Convert.ToInt32(a * 255.0f), 255);
+            return Color.FromArgb(colorA, colorR, colorG, colorB);
         }
 
         #endregion
@@ -683,6 +705,152 @@ namespace GTAVMod_Speedometer
         }
     }
 
+    class AccelerationTimerWidget
+    {
+        public AccelerationTimerState State
+        {
+            get;
+            private set;
+        }
+
+        const int TIME_DISPLAYFINISHED = 6; // seconds
+        UIText timerText;
+        float watchTime;
+        float displayTime = 0;
+
+        public AccelerationTimerWidget()
+        {
+            State = AccelerationTimerState.Off;
+            timerText = new UIText("", new Point(UI.WIDTH / 2, UI.HEIGHT / 2), 0.5f, Color.White, 0, true);
+        }
+
+        public void Update(float speed)
+        {
+            switch (State)
+            {
+                case AccelerationTimerState.Off:
+                    break;
+                case AccelerationTimerState.WaitingForStop:
+                    if (speed == 0)
+                    {
+                        State = AccelerationTimerState.Ready;
+                    }
+                    break;
+                case AccelerationTimerState.Ready:
+                    if (speed != 0)
+                    {
+                        State = AccelerationTimerState.Counting;
+                    }
+                    break;
+                case AccelerationTimerState.Counting:
+                    if (speed >= (float)100000 / 3600) // 100 kph
+                    {
+                        State = AccelerationTimerState.Finished;
+                        timerText.Color = Color.Red;
+                        displayTime = 0;
+                    }
+                    else
+                    {
+                        watchTime += Game.LastFrameTime;
+                    }
+                    break;
+                case AccelerationTimerState.Finished:
+                    displayTime += Game.LastFrameTime;
+                    if (displayTime > TIME_DISPLAYFINISHED)
+                    {
+                        displayTime = 0;
+                        this.Stop();
+                    }
+                    break;
+            }
+        }
+
+        public void Draw()
+        {
+            if (State != AccelerationTimerState.Off)
+            {
+                timerText.Caption = watchTime.ToString("0.000s");
+                if (State == AccelerationTimerState.WaitingForStop) timerText.Caption += "\nPlease stop your vehicle";
+                else if (State == AccelerationTimerState.Ready) timerText.Caption += "\nReady";
+                timerText.Draw();
+            }
+        }
+
+        public void Toggle()
+        {
+            if (State == AccelerationTimerState.Off) Start();
+            else Stop();
+        }
+
+        public void Start()
+        {
+            State = AccelerationTimerState.WaitingForStop;
+            watchTime = 0;
+            timerText.Color = Color.White; // reset color
+        }
+
+        public void Stop()
+        {
+            State = AccelerationTimerState.Off;
+        }
+    }
+
+    class MaxSpeedWidget
+    {
+        float maxSpeed;
+        UIText maxSpeedText;
+
+        public MaxSpeedState State
+        {
+            get;
+            private set;
+        }
+
+        public MaxSpeedWidget()
+        {
+            State = MaxSpeedState.Off;
+            maxSpeedText = new UIText("", new Point(UI.WIDTH / 2, UI.HEIGHT / 2 + 50), 0.5f, Color.White, 0, true);
+            maxSpeed = 0;
+        }
+
+        public void Update(float speed)
+        {
+            if (State == MaxSpeedState.Counting)
+            {
+                if (speed > maxSpeed) maxSpeed = speed;
+            }
+        }
+
+        public void Draw(bool useMph)
+        {
+            if (State == MaxSpeedState.Counting)
+            {
+                float speedKph = Metric_Speedometer.MsToKmh(maxSpeed);
+                maxSpeedText.Caption = "Max: " + (useMph ? Metric_Speedometer.KmToMiles(speedKph).ToString("0.0 mph") : speedKph.ToString("0.0 km/h"));
+                maxSpeedText.Draw();
+            }
+        }
+
+        public void Toggle()
+        {
+            if (State == MaxSpeedState.Off) Start();
+            else Stop();
+        }
+
+        public void Start()
+        {
+            this.maxSpeed = 0;
+            State = MaxSpeedState.Counting;
+        }
+
+        public void Stop()
+        {
+            State = MaxSpeedState.Off;
+        }
+    }
+
+    #region Enums
+
     enum SpeedoMode
     {
         Off = 0,
@@ -690,12 +858,29 @@ namespace GTAVMod_Speedometer
         Detailed = 2,
     }
 
-    enum UpdateCheckStatus
+    enum UpdateCheckState
     {
         Stopped = 0,
         Checking = 1,
         Checked = 2,
     }
+
+    enum AccelerationTimerState
+    {
+        Off = 0, // off
+        WaitingForStop = 1, // veh not stopped
+        Ready = 2, // veh stopped, timer ready
+        Counting = 3, // veh accelerating, timer counting
+        Finished = 4, // veh reached 100kph, timer stops
+    }
+
+    enum MaxSpeedState
+    {
+        Off = 0,
+        Counting = 1,
+    }
+
+    #endregion
 
     #region INI File class
 
