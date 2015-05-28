@@ -1,7 +1,7 @@
 ﻿/*
  * Simple Metric/Imperial Speedometer
  * Author: libertylocked
- * Version: 2.1.0
+ * Version: 2.1.1
  * License: GPLv2
  */
 using System;
@@ -23,7 +23,7 @@ namespace GTAVMod_Speedometer
     public class Metric_Speedometer : Script
     {
         // Constants
-        public const string SCRIPT_VERSION = "2.1.0";
+        public const string SCRIPT_VERSION = "2.1.1";
         const string URL_VERSIONFILE = @"https://raw.githubusercontent.com/LibertyLocked/GTAVMod_Speedometer/release/GTAVMod_Speedometer/version.txt"; // latest ver text
         const int NUM_FONTS = 8;
         const float RAINBOW_FRAMETIME = 0.034f;
@@ -154,6 +154,8 @@ namespace GTAVMod_Speedometer
             {
                 this.View.CloseAllMenus();
                 this.View.AddMenu(mainMenu);
+                UpdateMainButtons(0);
+                
                 if (!creditsShown)
                 {
                     ShowCredits();
@@ -296,9 +298,9 @@ namespace GTAVMod_Speedometer
             // Create main menu
             MenuButton btnToggle = new MenuButton("", delegate { speedoMode = (SpeedoMode)(((int)speedoMode + 1) % Enum.GetNames(typeof(SpeedoMode)).Length); UpdateMainButtons(0); });
             MenuButton btnClear = new MenuButton("Reset Odometer", delegate { distanceKm = 0; UI.Notify("Odometer reset"); });
-            MenuButton btnCore = new MenuButton("Core Settings >", delegate { View.AddMenu(coreMenu); });
-            MenuButton btnDisp = new MenuButton("Display Settings >", delegate { View.AddMenu(dispMenu); });
-            MenuButton btnExtras = new MenuButton("Extras >", delegate { View.AddMenu(extrasMenu); });
+            MenuButton btnCore = new MenuButton("Core Settings >", delegate { View.AddMenu(coreMenu); UpdateCoreButtons(0); });
+            MenuButton btnDisp = new MenuButton("Display Settings >", delegate { View.AddMenu(dispMenu); UpdateDispButtons(0); });
+            MenuButton btnExtras = new MenuButton("Extras >", delegate { View.AddMenu(extrasMenu); UpdateExtrasButtons(0); });
             MenuButton btnReload = new MenuButton("Reload", delegate 
                 { 
                     ParseSettings(); SetupUIElements();
@@ -351,8 +353,8 @@ namespace GTAVMod_Speedometer
                     offsetMenu.HasFooter = false;
                     View.AddMenu(offsetMenu);
                 });
-            MenuButton btnBackcolor = new MenuButton("Back Color >", delegate { isChangingBackcolor = true; UpdateColorButtons(0); View.AddMenu(colorMenu); });
-            MenuButton btnForecolor = new MenuButton("Fore Color >", delegate { isChangingBackcolor = false; UpdateColorButtons(0); View.AddMenu(colorMenu); });
+            MenuButton btnBackcolor = new MenuButton("Back Color >", delegate { isChangingBackcolor = true; View.AddMenu(colorMenu); UpdateColorButtons(0); });
+            MenuButton btnForecolor = new MenuButton("Fore Color >", delegate { isChangingBackcolor = false; View.AddMenu(colorMenu); UpdateColorButtons(0); });
             MenuButton btnRstDefault = new MenuButton("Restore to Default", delegate { ResetUIToDefault(); UpdateDispButtons(8); });
             this.dispMenuItems = new GTA.MenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
             this.dispMenu = new GTA.Menu("Display Settings", dispMenuItems);
@@ -423,11 +425,11 @@ namespace GTAVMod_Speedometer
             this.extrasMenu.HasFooter = false;
             
             
-            UpdateMainButtons(0);
-            UpdateCoreButtons(0);
-            UpdateDispButtons(0);
-            UpdateColorButtons(0);
-            UpdateExtrasButtons(0);
+            //UpdateMainButtons(0);
+            //UpdateCoreButtons(0);
+            //UpdateDispButtons(0);
+            //UpdateColorButtons(0);
+            //UpdateExtrasButtons(0);
         }
 
         void UpdateMainButtons(int selectedIndex)
