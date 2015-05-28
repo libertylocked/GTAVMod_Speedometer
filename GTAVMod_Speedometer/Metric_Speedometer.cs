@@ -304,7 +304,7 @@ namespace GTAVMod_Speedometer
             MenuButton btnReload = new MenuButton("Reload", delegate 
                 { 
                     ParseSettings(); SetupUIElements();
-                    UpdateMainButtons(5); UpdateCoreButtons(0); UpdateDispButtons(0); UpdateColorButtons(0); UpdateExtrasButtons(0);
+                    UpdateMainButtons(5);
                     UI.Notify("Speedometer reloaded"); 
                 });
             MenuButton btnBack = new MenuButton("Save & Exit", delegate { View.CloseAllMenus(); });
