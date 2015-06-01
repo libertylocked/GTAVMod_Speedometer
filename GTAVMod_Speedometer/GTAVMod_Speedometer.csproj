@@ -54,6 +54,8 @@
     <None Include="Metric_Speedometer.ini" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Metric_Speedometer_Localization\cn-TW.txt" />
+    <Content Include="Metric_Speedometer_Localization\en-US.txt" />
     <Content Include="readme.txt" />
     <Content Include="version.txt" />
   </ItemGroup>
