@@ -1,0 +1,43 @@
+Reset Odometer
+Core Settings >
+Display Settings >
+Extras >
+Reload
+Save & Exit
+Font Size >
++ Font Size
+- Font Size
+Panel Size >
++ Panel Width
+- Panel Width
++ Panel Height
+- Panel Height
+Set Offset >
+Move Up
+Move Down
+Move Left
+Move Right
+Clear Offset
+Back Color >
+Fore Color >
+Restore to Default
++ R
+- R
++ G
+- G
++ B
+- B
++ Opacity
+- Opacity
+0-100kph Timer
+Max Speed Recorder
+Show Credits
+Check for Updates
+Toggle Display: 
+Speed Unit: 
+Save Odometer: 
+Vertical: 
+Horizontal: 
+Font Style: 
+Rainbow Mode: 
+ Timer

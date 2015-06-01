@@ -70,6 +70,7 @@ namespace GTAVMod_Speedometer
         public Metric_Speedometer()
         {
             ParseSettings();
+            Strings.LoadFromFile(@"scripts\Metric_Speedometer_Localization\en-US.txt", Encoding.ASCII);
             SetupUIElements();
             SetupMenus();
 
@@ -297,17 +298,17 @@ namespace GTAVMod_Speedometer
         {
             // Create main menu
             MenuButton btnToggle = new MenuButton("", delegate { speedoMode = (SpeedoMode)(((int)speedoMode + 1) % Enum.GetNames(typeof(SpeedoMode)).Length); UpdateMainButtons(0); });
-            MenuButton btnClear = new MenuButton("Reset Odometer", delegate { distanceKm = 0; UI.Notify("Odometer reset"); });
-            MenuButton btnCore = new MenuButton("Core Settings >", delegate { View.AddMenu(coreMenu); UpdateCoreButtons(0); });
-            MenuButton btnDisp = new MenuButton("Display Settings >", delegate { View.AddMenu(dispMenu); UpdateDispButtons(0); });
-            MenuButton btnExtras = new MenuButton("Extras >", delegate { View.AddMenu(extrasMenu); UpdateExtrasButtons(0); });
-            MenuButton btnReload = new MenuButton("Reload", delegate 
+            MenuButton btnClear = new MenuButton(Strings.ResetOdometer, delegate { distanceKm = 0; UI.Notify("Odometer reset"); });
+            MenuButton btnCore = new MenuButton(Strings.CoreSettings, delegate { View.AddMenu(coreMenu); UpdateCoreButtons(0); });
+            MenuButton btnDisp = new MenuButton(Strings.DisplaySettings, delegate { View.AddMenu(dispMenu); UpdateDispButtons(0); });
+            MenuButton btnExtras = new MenuButton(Strings.Extras, delegate { View.AddMenu(extrasMenu); UpdateExtrasButtons(0); });
+            MenuButton btnReload = new MenuButton(Strings.Reload, delegate 
                 { 
                     ParseSettings(); SetupUIElements();
                     UpdateMainButtons(5);
                     UI.Notify("Speedometer reloaded"); 
                 });
-            MenuButton btnBack = new MenuButton("Save & Exit", delegate { View.CloseAllMenus(); });
+            MenuButton btnBack = new MenuButton(Strings.SaveAndExit, delegate { View.CloseAllMenus(); });
             this.mainMenuItems = new GTA.MenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack };
             this.mainMenu = new MySettingsMenu("Speedometer v" + SCRIPT_VERSION, mainMenuItems, this);
             this.mainMenu.HasFooter = false;
@@ -324,86 +325,86 @@ namespace GTAVMod_Speedometer
             MenuButton btnVAlign = new MenuButton("", delegate { vAlign = (VerticalAlignment)(((int)vAlign + 1) % 3); posOffset.Y = 0; SetupUIElements(); UpdateDispButtons(0); });
             MenuButton btnHAlign = new MenuButton("", delegate { hAlign = (HorizontalAlign)(((int)hAlign + 1) % 3); posOffset.X = 0; SetupUIElements(); UpdateDispButtons(1); });
             MenuButton btnFontStyle = new MenuButton("", delegate { fontStyle = ++fontStyle % NUM_FONTS; SetupUIElements(); UpdateDispButtons(2); });
-            MenuButton btnFontSize = new MenuButton("Font Size >", delegate
+            MenuButton btnFontSize = new MenuButton(Strings.FontSize, delegate
                 {
-                    MenuButton btnAddSize = new MenuButton("+ Font Size", delegate { fontSize += 0.02f; SetupUIElements(); });
-                    MenuButton btnSubSize = new MenuButton("- Font Size", delegate { fontSize -= 0.02f; SetupUIElements(); });
+                    MenuButton btnAddSize = new MenuButton(Strings.AddFontSize, delegate { fontSize += 0.02f; SetupUIElements(); });
+                    MenuButton btnSubSize = new MenuButton(Strings.SubFontSize, delegate { fontSize -= 0.02f; SetupUIElements(); });
                     GTA.Menu sizeMenu = new GTA.Menu("Font Size", new GTA.MenuItem[] { btnAddSize, btnSubSize });
                     sizeMenu.HasFooter = false;
                     View.AddMenu(sizeMenu);
                 });
-            MenuButton btnPanelSize = new MenuButton("Panel Size >", delegate
+            MenuButton btnPanelSize = new MenuButton(Strings.PanelSize, delegate
                 {
-                    MenuButton btnAddWidth = new MenuButton("+ Panel Width", delegate { pWidth += 2; SetupUIElements(); });
-                    MenuButton btnSubWidth = new MenuButton("- Panel Width", delegate { pWidth -= 2; SetupUIElements(); });
-                    MenuButton btnAddHeight = new MenuButton("+ Panel Height", delegate { pHeight += 2; SetupUIElements(); });
-                    MenuButton btnSubHeight = new MenuButton("- Panel Height", delegate { pHeight -= 2; SetupUIElements(); });
+                    MenuButton btnAddWidth = new MenuButton(Strings.AddPanelWidth, delegate { pWidth += 2; SetupUIElements(); });
+                    MenuButton btnSubWidth = new MenuButton(Strings.SubPanelWidth, delegate { pWidth -= 2; SetupUIElements(); });
+                    MenuButton btnAddHeight = new MenuButton(Strings.AddPanelHeight, delegate { pHeight += 2; SetupUIElements(); });
+                    MenuButton btnSubHeight = new MenuButton(Strings.SubPanelHeight, delegate { pHeight -= 2; SetupUIElements(); });
                     GTA.Menu panelSizeMenu = new GTA.Menu("Panel Size", new GTA.MenuItem[] { btnAddWidth, btnSubWidth, btnAddHeight, btnSubHeight });
                     panelSizeMenu.HasFooter = false;
                     View.AddMenu(panelSizeMenu);
                 });
-            MenuButton btnAplyOffset = new MenuButton("Set Offset >", delegate
+            MenuButton btnAplyOffset = new MenuButton(Strings.SetOffset, delegate
                 {
-                    MenuButton btnOffsetUp = new MenuButton("Move Up", delegate { posOffset.Y += -2; SetupUIElements(); });
-                    MenuButton btnOffsetDown = new MenuButton("Move Down", delegate { posOffset.Y += 2; SetupUIElements(); });
-                    MenuButton btnOffsetLeft = new MenuButton("Move Left", delegate { posOffset.X += -2; SetupUIElements(); });
-                    MenuButton btnOffsetRight = new MenuButton("Move Right", delegate { posOffset.X += 2; SetupUIElements(); });
-                    MenuButton btnOffsetClr = new MenuButton("Clear Offset", delegate { posOffset.X = 0; posOffset.Y = 0; SetupUIElements(); });
+                    MenuButton btnOffsetUp = new MenuButton(Strings.MoveUp, delegate { posOffset.Y += -2; SetupUIElements(); });
+                    MenuButton btnOffsetDown = new MenuButton(Strings.MoveDown, delegate { posOffset.Y += 2; SetupUIElements(); });
+                    MenuButton btnOffsetLeft = new MenuButton(Strings.MoveLeft, delegate { posOffset.X += -2; SetupUIElements(); });
+                    MenuButton btnOffsetRight = new MenuButton(Strings.MoveRight, delegate { posOffset.X += 2; SetupUIElements(); });
+                    MenuButton btnOffsetClr = new MenuButton(Strings.ClearOffset, delegate { posOffset.X = 0; posOffset.Y = 0; SetupUIElements(); });
                     GTA.Menu offsetMenu = new GTA.Menu("Set Offset", new GTA.MenuItem[] { btnOffsetUp, btnOffsetDown, btnOffsetLeft, btnOffsetRight, btnOffsetClr });
                     offsetMenu.HasFooter = false;
                     View.AddMenu(offsetMenu);
                 });
-            MenuButton btnBackcolor = new MenuButton("Back Color >", delegate { isChangingBackcolor = true; View.AddMenu(colorMenu); UpdateColorButtons(0); });
-            MenuButton btnForecolor = new MenuButton("Fore Color >", delegate { isChangingBackcolor = false; View.AddMenu(colorMenu); UpdateColorButtons(0); });
-            MenuButton btnRstDefault = new MenuButton("Restore to Default", delegate { ResetUIToDefault(); UpdateDispButtons(8); });
+            MenuButton btnBackcolor = new MenuButton(Strings.BackColor, delegate { isChangingBackcolor = true; View.AddMenu(colorMenu); UpdateColorButtons(0); });
+            MenuButton btnForecolor = new MenuButton(Strings.ForeColor, delegate { isChangingBackcolor = false; View.AddMenu(colorMenu); UpdateColorButtons(0); });
+            MenuButton btnRstDefault = new MenuButton(Strings.RestoreToDefault, delegate { ResetUIToDefault(); UpdateDispButtons(8); });
             this.dispMenuItems = new GTA.MenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
             this.dispMenu = new GTA.Menu("Display Settings", dispMenuItems);
             this.dispMenu.HasFooter = false;
 
             // Create color menu
-            MenuButton btnAddR = new MenuButton("+ R", delegate 
+            MenuButton btnAddR = new MenuButton(Strings.AddR, delegate 
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 5, 0, 0);
                     else forecolor = IncrementARGB(forecolor, 0, 5, 0, 0);
                     SetupUIElements(); UpdateColorButtons(0);
                 });
-            MenuButton btnSubR = new MenuButton("- R", delegate
+            MenuButton btnSubR = new MenuButton(Strings.SubR, delegate
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, -5, 0, 0);
                     else forecolor = IncrementARGB(forecolor, 0, -5, 0, 0);
                     SetupUIElements(); UpdateColorButtons(1);
                 });
-            MenuButton btnAddG = new MenuButton("+ G", delegate
+            MenuButton btnAddG = new MenuButton(Strings.AddG, delegate
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 5, 0);
                     else forecolor = IncrementARGB(forecolor, 0, 0, 5, 0);
                     SetupUIElements(); UpdateColorButtons(2);
                 });
-            MenuButton btnSubG = new MenuButton("- G", delegate
+            MenuButton btnSubG = new MenuButton(Strings.SubG, delegate
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, -5, 0);
                     else forecolor = IncrementARGB(forecolor, 0, 0, -5, 0);
                     SetupUIElements(); UpdateColorButtons(3);
                 });
-            MenuButton btnAddB = new MenuButton("+ B", delegate
+            MenuButton btnAddB = new MenuButton(Strings.AddB, delegate
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 0, 5);
                     else forecolor = IncrementARGB(forecolor, 0, 0, 0, 5);
                     SetupUIElements(); UpdateColorButtons(4);
                 });
-            MenuButton btnSubB = new MenuButton("- B", delegate
+            MenuButton btnSubB = new MenuButton(Strings.SubB, delegate
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 0, -5);
                     else forecolor = IncrementARGB(forecolor, 0, 0, 0, -5);
                     SetupUIElements(); UpdateColorButtons(5);
                 });
-            MenuButton btnAddA = new MenuButton("+ Opacity", delegate
+            MenuButton btnAddA = new MenuButton(Strings.AddOpacity, delegate
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 5, 0, 0, 0);
                     else forecolor = IncrementARGB(forecolor, 5, 0, 0, 0);
                     SetupUIElements(); UpdateColorButtons(6);
                 });
-            MenuButton btnSubA = new MenuButton("- Opacity", delegate
+            MenuButton btnSubA = new MenuButton(Strings.SubOpacity, delegate
                 {
                     if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, -5, 0, 0, 0);
                     else forecolor = IncrementARGB(forecolor, -5, 0, 0, 0);
@@ -416,56 +417,49 @@ namespace GTAVMod_Speedometer
 
             // Create extras menu
             MenuButton btnRainbowMode = new MenuButton("", delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); });
-            MenuButton btnAccTimer = new MenuButton("0-100kph Timer", delegate { wid_accTimer.Toggle(); });
-            MenuButton btnMaxSpeed = new MenuButton("Max Speed Recorder", delegate { wid_maxSpeed.Toggle(); });
-            MenuButton btnShowCredits = new MenuButton("Show Credits", ShowCredits);
-            MenuButton btnUpdates = new MenuButton("Check for Updates", CheckForUpdates);
+            MenuButton btnAccTimer = new MenuButton(Strings.AccelerationTimer, delegate { wid_accTimer.Toggle(); });
+            MenuButton btnMaxSpeed = new MenuButton(Strings.MaxSpeedRecorder, delegate { wid_maxSpeed.Toggle(); });
+            MenuButton btnShowCredits = new MenuButton(Strings.ShowCredits, ShowCredits);
+            MenuButton btnUpdates = new MenuButton(Strings.CheckForUpdates, CheckForUpdates);
             this.extrasMenuItems = new GTA.MenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates };
             this.extrasMenu = new GTA.Menu("Extras", extrasMenuItems);
             this.extrasMenu.HasFooter = false;
-            
-            
-            //UpdateMainButtons(0);
-            //UpdateCoreButtons(0);
-            //UpdateDispButtons(0);
-            //UpdateColorButtons(0);
-            //UpdateExtrasButtons(0);
         }
 
         void UpdateMainButtons(int selectedIndex)
         {
-            mainMenuItems[0].Caption = "Toggle Display: " + speedoMode.ToString();
+            mainMenuItems[0].Caption = Strings.ToggleDisplay + speedoMode.ToString();
             ChangeMenuSelectedIndex(mainMenu, selectedIndex);
         }
 
         void UpdateCoreButtons(int selectedIndex)
         {
-            coreMenuItems[0].Caption = "Speed Unit: " + (useMph ? "Imperial" : "Metric");
-            coreMenuItems[1].Caption = "Save Odometer: " + (enableSaving ? "On" : "Off");
+            coreMenuItems[0].Caption = Strings.SpeedUnit + (useMph ? "Imperial" : "Metric");
+            coreMenuItems[1].Caption = Strings.SaveOdometer + (enableSaving ? "On" : "Off");
             //coreMenuItems[2].Caption = "Enable Menu Key: " + enableMenu;
             ChangeMenuSelectedIndex(coreMenu, selectedIndex);
         }
 
         void UpdateDispButtons(int selectedIndex)
         {
-            dispMenuItems[0].Caption = "Vertical: " + System.Enum.GetName(typeof(VerticalAlignment), vAlign);
-            dispMenuItems[1].Caption = "Horizontal: " + System.Enum.GetName(typeof(HorizontalAlign), hAlign);
-            dispMenuItems[2].Caption = "Font Style: " + fontStyle;
+            dispMenuItems[0].Caption = Strings.Vertical + System.Enum.GetName(typeof(VerticalAlignment), vAlign);
+            dispMenuItems[1].Caption = Strings.Horizontal + System.Enum.GetName(typeof(HorizontalAlign), hAlign);
+            dispMenuItems[2].Caption = Strings.FontStyle + fontStyle;
             ChangeMenuSelectedIndex(dispMenu, selectedIndex);
         }
 
         void UpdateColorButtons(int selectedIndex)
         {
             Color color = isChangingBackcolor ? backcolor : forecolor;
-            colorMenu.Caption = (isChangingBackcolor ? "Back Color" : "Fore Color") 
+            colorMenu.Caption = (isChangingBackcolor ? Strings.BackColor : Strings.ForeColor) 
                 + "\nR: " + color.R + " G: " + color.G + " B: " + color.B + " A: " + color.A;
             ChangeMenuSelectedIndex(colorMenu, selectedIndex);
         }
 
         void UpdateExtrasButtons(int selectedIndex)
         {
-            extrasMenuItems[0].Caption = "Rainbow Mode: " + (rainbowMode == 0 ? "Off" : Math.Pow(2, rainbowMode - 1) + "x");
-            extrasMenuItems[1].Caption = (useMph ? "0-62 mph" : "0-100 kph") + " Timer";
+            extrasMenuItems[0].Caption = Strings.RainbowMode + (rainbowMode == 0 ? "Off" : Math.Pow(2, rainbowMode - 1) + "x");
+            extrasMenuItems[1].Caption = (useMph ? "0-62 mph" : "0-100 kph") + Strings.Timer;
             ChangeMenuSelectedIndex(extrasMenu, selectedIndex);
         }
 
@@ -880,6 +874,72 @@ namespace GTAVMod_Speedometer
     {
         Off = 0,
         Counting = 1,
+    }
+
+    #endregion
+
+    #region Localization helper class
+
+    class Strings
+    {
+        public static string ResetOdometer, CoreSettings, DisplaySettings, Extras, Reload, SaveAndExit;
+        public static string FontSize, AddFontSize, SubFontSize;
+        public static string PanelSize, AddPanelWidth, SubPanelWidth, AddPanelHeight, SubPanelHeight;
+        public static string SetOffset, MoveUp, MoveDown, MoveLeft, MoveRight, ClearOffset;
+        public static string BackColor, ForeColor;
+        public static string RestoreToDefault;
+        public static string AddR, SubR, AddG, SubG, AddB, SubB, AddOpacity, SubOpacity;
+        public static string AccelerationTimer, MaxSpeedRecorder;
+        public static string ShowCredits, CheckForUpdates;
+        public static string ToggleDisplay;
+        public static string SpeedUnit, SaveOdometer;
+        public static string Vertical, Horizontal;
+        public static string FontStyle;
+        public static string RainbowMode;
+        public static string Timer;
+
+        public static void LoadFromFile(string filename, Encoding encoding)
+        {
+            using (StreamReader sr = new StreamReader(filename, encoding))
+            {
+                ResetOdometer = sr.ReadLine();
+                CoreSettings = sr.ReadLine();
+                DisplaySettings = sr.ReadLine();
+                Extras = sr.ReadLine();
+                Reload = sr.ReadLine();
+                SaveAndExit = sr.ReadLine();
+                FontSize = sr.ReadLine();
+                AddFontSize = sr.ReadLine();
+                SubFontSize = sr.ReadLine();
+                PanelSize = sr.ReadLine();
+                AddPanelWidth = sr.ReadLine();
+                SubPanelWidth = sr.ReadLine();
+                AddPanelHeight = sr.ReadLine();
+                SubPanelHeight = sr.ReadLine();
+                SetOffset = sr.ReadLine();
+                MoveUp = sr.ReadLine();
+                MoveDown = sr.ReadLine();
+                MoveLeft = sr.ReadLine();
+                MoveRight = sr.ReadLine();
+                ClearOffset = sr.ReadLine();
+                BackColor = sr.ReadLine();
+                ForeColor = sr.ReadLine();
+                RestoreToDefault = sr.ReadLine();
+                AddR = sr.ReadLine(); SubR = sr.ReadLine(); 
+                AddG = sr.ReadLine(); SubG = sr.ReadLine(); 
+                AddB = sr.ReadLine(); SubB = sr.ReadLine(); 
+                AddOpacity = sr.ReadLine(); SubOpacity = sr.ReadLine();
+                AccelerationTimer = sr.ReadLine();
+                MaxSpeedRecorder = sr.ReadLine();
+                ShowCredits = sr.ReadLine();
+                CheckForUpdates = sr.ReadLine();
+                ToggleDisplay = sr.ReadLine();
+                SpeedUnit = sr.ReadLine(); SaveOdometer = sr.ReadLine();
+                Vertical = sr.ReadLine(); Horizontal = sr.ReadLine();
+                FontStyle = sr.ReadLine(); RainbowMode = sr.ReadLine();
+                Timer = sr.ReadLine();
+            }
+        }
     }
 
     #endregion
