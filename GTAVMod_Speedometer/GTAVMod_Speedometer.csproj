@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Metric_Speedometer_Localization\cn-TW.txt" />
+    <Content Include="Metric_Speedometer_Localization\de-DE.txt" />
     <Content Include="Metric_Speedometer_Localization\en-US.txt" />
     <Content Include="readme.txt" />
     <Content Include="version.txt" />

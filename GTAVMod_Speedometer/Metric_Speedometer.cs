@@ -55,6 +55,7 @@ namespace GTAVMod_Speedometer
         GTA.Menu coreMenu, dispMenu, colorMenu, extrasMenu;
         GTA.MenuItem[] mainMenuItems, coreMenuItems, dispMenuItems, colorMenuItems, extrasMenuItems;
         bool isChangingBackcolor;
+        string localizationFile = "en-US";
 
         // Fields for UI settings
         VerticalAlignment vAlign;
@@ -70,7 +71,8 @@ namespace GTAVMod_Speedometer
         public Metric_Speedometer()
         {
             ParseSettings();
-            Strings.LoadFromFile(@"scripts\Metric_Speedometer_Localization\en-US.txt", Encoding.ASCII);
+            Strings.LoadFromFile(@"scripts\Metric_Speedometer_Localization\" + localizationFile + ".txt", 
+                Encoding.GetEncoding(CultureInfo.GetCultureInfo(localizationFile).TextInfo.OEMCodePage));
             SetupUIElements();
             SetupMenus();
 
@@ -218,6 +220,7 @@ namespace GTAVMod_Speedometer
                     this.menuKey = (Keys)Enum.Parse(typeof(Keys), settings.GetValue("Core", "MenuKey"), true);
                 this.enableSaving = settings.GetValue("Core", "EnableSaving", true);
                 this.rainbowMode = settings.GetValue("Core", "RainbowMode", 0);
+                this.localizationFile = settings.GetValue("Core", "Localization", "en-US");
 
                 // Parse UI settings
                 this.vAlign = (VerticalAlignment)Enum.Parse(typeof(VerticalAlignment), settings.GetValue("UI", "VertAlign"), true);

@@ -1,0 +1,43 @@
+Kilometerzähler zurückstellen
+Core-Einstellungen>
+Anzeige-Einstellungen>
+Extras>
+nachladen
+Save & Exit
+Schriftgröße>
++ Schriftgröße
+- Schriftgröße
+Bildschirmgröße>
++ Schalttafelbreite
+- Schalttafelbreite
++ Panel Höhe
+- Panel Höhe
+Set Offset>
+Nach oben
+Sich Abwärts Bewegen
+Geh Nach Links
+Nach rechts
+klar Offset
+Zurück Farbe>
+Fore Farbe>
+Standard wiederherstellen
++ R
+- R
++ G
+- G
++ B
+- B
++ Deckkraft
+- Deckkraft
+0-100kph Timer
+Max Geschwindigkeit Recorder
+Credits Karte
+Auf Updates prüfen
+Toggle Display:
+Stärkeeinheit:
+Sparen Kilometerstand:
+Vertikal:
+Horizontal:
+Schriftschnitt:
+Regenbogen-Modus:
+  Timer
