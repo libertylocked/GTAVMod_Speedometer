@@ -491,7 +491,7 @@ namespace GTAVMod_Speedometer
         {
             dispMenuItems[0].Caption = "Vertical: " + System.Enum.GetName(typeof(VerticalAlignment), vAlign);
             dispMenuItems[1].Caption = "Horizontal: " + System.Enum.GetName(typeof(HorizontalAlign), hAlign);
-            dispMenuItems[2].Caption = "Font Style: " + Enum.GetName(typeof(GTA.Font), fontStyle);
+            dispMenuItems[2].Caption = "Font Style: " + fontStyle;
             ChangeMenuSelectedIndex(dispMenu, selectedIndex);
         }
 
