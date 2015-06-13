@@ -2,7 +2,7 @@
 by libertylocked
 
 ###IMPORTANT: 
-Please update your ScriptHookV DotNet to v0.9 or above. Read the troubleshooting section if it doesn't show up! 
+Please update your ScriptHookV DotNet to v1.0. Read the troubleshooting section if it doesn't show up! 
 
 ###v2.0: IT'S FINALLY HERE! 
 Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN customizing your speedometer! 
@@ -31,6 +31,7 @@ Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN custom
 4. The speedometer still won't show up? Check the ScriptHookVDotNet.log in game root directory and paste me the related logs.
 
 ##CHANGELOG SINCE 2.0: 
+- v2.1.2: Updated for Script Hook V .NET v1.0
 - v2.1.1: Fixed issues with some nightly builds of Script Hook V .NET
 - v2.1.0: Added 0-100kph(62mph) timer and max speed recorder
 - v2.0.3: Fixed "Reload" and "Restore to Default" buttons.
