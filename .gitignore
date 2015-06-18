@@ -183,4 +183,4 @@ UpgradeLog*.htm
 FakesAssemblies/
 
 # Xamarin Studio
-.userprefs
+*.userprefs
