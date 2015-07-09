@@ -3721,6 +3721,7 @@ Struct GTA.Native.Hash: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFiel
     GTA.Native.Hash RELEASE_MOVIE_MESH_SET = 16938489685853376899 : Public, Static, Literal, HasDefault
     GTA.Native.Hash _0x9B6E70C5CEEF4EEB = 11200013318199660267 : Public, Static, Literal, HasDefault
     GTA.Native.Hash GET_SCREEN_RESOLUTION = 9839617397771089444 : Public, Static, Literal, HasDefault
+    GTA.Native.Hash _GET_SCREEN_ACTIVE_RESOLUTION = 9744838726593289683 : Public, Static, Literal, HasDefault
     GTA.Native.Hash _0xB2EBE8CBC58B90E9 = 12892654320168440041 : Public, Static, Literal, HasDefault
     GTA.Native.Hash GET_IS_WIDESCREEN = 3517113235013310725 : Public, Static, Literal, HasDefault
     GTA.Native.Hash GET_IS_HIDEF = 9578365966413583049 : Public, Static, Literal, HasDefault
@@ -6456,6 +6457,7 @@ Class GTA.Camera: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
 Class GTA.Entity: AutoLayout, AnsiClass, Class, Public, Abstract, BeforeFieldInit
     Void .ctor(Int32): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
   Properties:
+    Int32 Alpha 'get set' : 
     GTA.Math.Vector3 Velocity 'get set' : 
     GTA.Math.Vector3 UpVector 'get ' : 
     GTA.Math.Vector3 Rotation 'get set' : 
@@ -6519,6 +6521,8 @@ Class GTA.Entity: AutoLayout, AnsiClass, Class, Public, Abstract, BeforeFieldIni
     get_UpVector(): PrivateScope, Public, HideBySig, SpecialName
     get_Velocity(): PrivateScope, Public, HideBySig, SpecialName
     set_Velocity(Vector3): PrivateScope, Public, HideBySig, SpecialName
+    get_Alpha(): PrivateScope, Public, HideBySig, SpecialName
+    set_Alpha(Int32): PrivateScope, Public, HideBySig, SpecialName
     IsInRangeOf(Vector3, Single): PrivateScope, Public, HideBySig
     IsInArea(Vector3, Vector3, Single): PrivateScope, Public, HideBySig
     IsInArea(Vector3, Vector3): PrivateScope, Public, HideBySig
@@ -6535,6 +6539,7 @@ Class GTA.Entity: AutoLayout, AnsiClass, Class, Public, Abstract, BeforeFieldIni
     ApplyForce(Vector3): PrivateScope, Public, HideBySig
     ApplyForceRelative(Vector3, Vector3): PrivateScope, Public, HideBySig
     ApplyForceRelative(Vector3): PrivateScope, Public, HideBySig
+    ResetAlpha(): PrivateScope, Public, HideBySig
     Delete(): PrivateScope, Public, HideBySig
     Exists(Entity): PrivateScope, Public, Static, HideBySig
     Exists(): PrivateScope, Public, HideBySig
@@ -6548,6 +6553,9 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     Void .ctor(Int32): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
   Properties:
     GTA.WeaponCollection Weapons 'get ' : 
+    Boolean DrownsInSinkingVehicle 'set' : 
+    Boolean DrownsInWater 'set' : 
+    Boolean DiesInstantlyInWater 'set' : 
     GTA.FiringPattern FiringPattern 'set' : 
     Single WetnessHeight 'set' : 
     GTA.DrivingStyle DrivingStyle 'set' : 
@@ -6557,9 +6565,12 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     Boolean IsSprinting 'get ' : 
     Boolean IsRunning 'get ' : 
     Boolean IsWalking 'get ' : 
+    Boolean IsStopped 'get ' : 
     Boolean CanPlayGestures 'set' : 
+    Boolean CanBeTargetted 'set' : 
     Boolean CanBeDraggedOutOfVehicle 'set' : 
     Boolean CanBeKnockedOffBike 'set' : 
+    Boolean CanSufferCriticalHits 'set' : 
     Boolean CanSwitchWeapons 'set' : 
     Boolean CanRagdoll 'get set' : 
     Boolean BlockPermanentEvents 'set' : 
@@ -6567,14 +6578,32 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     Boolean IsPriorityTargetForEnemies 'set' : 
     Boolean IsEnemy 'set' : 
     GTA.Vehicle CurrentVehicle 'get ' : 
+    Boolean IsInPoliceVehicle 'get ' : 
+    Boolean IsInFlyingVehicle 'get ' : 
+    Boolean IsInTrain 'get ' : 
+    Boolean IsInPlane 'get ' : 
+    Boolean IsInHeli 'get ' : 
+    Boolean IsInSub 'get ' : 
+    Boolean IsInBoat 'get ' : 
+    Boolean IsOnBike 'get ' : 
+    Boolean IsOnFoot 'get ' : 
     Boolean IsSwimmingUnderWater 'get ' : 
     Boolean IsSwimming 'get ' : 
+    Boolean IsDoingDriveBy 'get ' : 
+    Boolean IsAimingFromCover 'get ' : 
     Boolean IsInMeleeCombat 'get ' : 
     Boolean IsInCombat 'get ' : 
     Boolean IsReloading 'get ' : 
     Boolean IsShooting 'get ' : 
+    Boolean WasKilledByTakedown 'get ' : 
+    Boolean WasKilledByStealth 'get ' : 
+    Boolean IsBeingStealthKilled 'get ' : 
+    Boolean IsBeingStunned 'get ' : 
+    Boolean IsBeingJacked 'get ' : 
+    Boolean IsJacking 'get ' : 
     Boolean IsInjured 'get ' : 
     Boolean IsRagdoll 'get ' : 
+    Boolean IsTryingToEnterALockedVehicle 'get ' : 
     Boolean IsGettingIntoAVehicle 'get ' : 
     Boolean IsGettingUp 'get ' : 
     Boolean IsDucking 'get set' : 
@@ -6590,6 +6619,9 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     GTA.Tasks Task 'get ' : 
     Int32 Accuracy 'get set' : 
   Methods:
+    GetBoneCoord(Bone, Vector3): PrivateScope, Public, HideBySig
+    GetBoneCoord(Bone): PrivateScope, Public, HideBySig
+    GetBoneIndex(Bone): PrivateScope, Public, HideBySig
     get_Accuracy(): PrivateScope, Public, HideBySig, SpecialName
     set_Accuracy(Int32): PrivateScope, Public, HideBySig, SpecialName
     get_Task(): PrivateScope, Public, HideBySig, SpecialName
@@ -6608,14 +6640,32 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     set_IsDucking(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     get_IsGettingUp(): PrivateScope, Public, HideBySig, SpecialName
     get_IsGettingIntoAVehicle(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsTryingToEnterALockedVehicle(): PrivateScope, Public, HideBySig, SpecialName
     get_IsRagdoll(): PrivateScope, Public, HideBySig, SpecialName
     get_IsInjured(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsJacking(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsBeingJacked(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsBeingStunned(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsBeingStealthKilled(): PrivateScope, Public, HideBySig, SpecialName
+    get_WasKilledByStealth(): PrivateScope, Public, HideBySig, SpecialName
+    get_WasKilledByTakedown(): PrivateScope, Public, HideBySig, SpecialName
     get_IsShooting(): PrivateScope, Public, HideBySig, SpecialName
     get_IsReloading(): PrivateScope, Public, HideBySig, SpecialName
     get_IsInCombat(): PrivateScope, Public, HideBySig, SpecialName
     get_IsInMeleeCombat(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsAimingFromCover(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsDoingDriveBy(): PrivateScope, Public, HideBySig, SpecialName
     get_IsSwimming(): PrivateScope, Public, HideBySig, SpecialName
     get_IsSwimmingUnderWater(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsOnFoot(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsOnBike(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsInBoat(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsInSub(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsInHeli(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsInPlane(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsInTrain(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsInFlyingVehicle(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsInPoliceVehicle(): PrivateScope, Public, HideBySig, SpecialName
     get_CurrentVehicle(): PrivateScope, Public, HideBySig, SpecialName
     set_IsEnemy(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     set_IsPriorityTargetForEnemies(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
@@ -6624,9 +6674,12 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     get_CanRagdoll(): PrivateScope, Public, HideBySig, SpecialName
     set_CanRagdoll(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     set_CanSwitchWeapons(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    set_CanSufferCriticalHits(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     set_CanBeKnockedOffBike(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     set_CanBeDraggedOutOfVehicle(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    set_CanBeTargetted(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     set_CanPlayGestures(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    get_IsStopped(): PrivateScope, Public, HideBySig, SpecialName
     get_IsWalking(): PrivateScope, Public, HideBySig, SpecialName
     get_IsRunning(): PrivateScope, Public, HideBySig, SpecialName
     get_IsSprinting(): PrivateScope, Public, HideBySig, SpecialName
@@ -6637,6 +6690,9 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     set_DrivingStyle(DrivingStyle): PrivateScope, Public, HideBySig, SpecialName
     set_WetnessHeight(Single): PrivateScope, Public, HideBySig, SpecialName
     set_FiringPattern(FiringPattern): PrivateScope, Public, HideBySig, SpecialName
+    set_DiesInstantlyInWater(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    set_DrownsInWater(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    set_DrownsInSinkingVehicle(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     get_Weapons(): PrivateScope, Public, HideBySig, SpecialName
     IsInVehicle(Vehicle): PrivateScope, Public, HideBySig
     IsInVehicle(): PrivateScope, Public, HideBySig
@@ -6644,13 +6700,12 @@ Class GTA.Ped: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     IsSittingInVehicle(): PrivateScope, Public, HideBySig
     GetRelationshipWithPed(Ped): PrivateScope, Public, HideBySig
     SetIntoVehicle(Vehicle, VehicleSeat): PrivateScope, Public, HideBySig
+    IsInCover(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    IsInCover(): PrivateScope, Public, HideBySig
     GetKiller(): PrivateScope, Public, HideBySig
     Kill(): PrivateScope, Public, HideBySig
     ResetVisibleDamage(): PrivateScope, Public, HideBySig
     ClearBloodDamage(): PrivateScope, Public, HideBySig
-    GetBoneCoord(Bone, Vector3): PrivateScope, Public, HideBySig
-    GetBoneCoord(Bone): PrivateScope, Public, HideBySig
-    GetBoneIndex(Bone): PrivateScope, Public, HideBySig
 Struct GTA.CameraShake: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
   :System.Enum
   Fields:
@@ -6868,7 +6923,9 @@ Class GTA.Player: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
 Class GTA.Game: AutoLayout, AnsiClass, Class, Public, Abstract, Sealed, BeforeFieldInit
   Properties:
     Single WantedMultiplier 'set' : 
+    GTA.GameVersion Version 'get ' : 
     Single TimeScale 'set' : 
+    System.Drawing.Size ScreenResolution 'get ' : 
     GTA.RadioStation RadioStation 'get set' : 
     Int32 RadarZoom 'set' : 
     GTA.Player Player 'get ' : 
@@ -6892,7 +6949,9 @@ Class GTA.Game: AutoLayout, AnsiClass, Class, Public, Abstract, Sealed, BeforeFi
     set_RadarZoom(Int32): PrivateScope, Public, Static, HideBySig, SpecialName
     get_RadioStation(): PrivateScope, Public, Static, HideBySig, SpecialName
     set_RadioStation(RadioStation): PrivateScope, Public, Static, HideBySig, SpecialName
+    get_ScreenResolution(): PrivateScope, Public, Static, HideBySig, SpecialName
     set_TimeScale(Single): PrivateScope, Public, Static, HideBySig, SpecialName
+    get_Version(): PrivateScope, Public, Static, HideBySig, SpecialName
     set_WantedMultiplier(Single): PrivateScope, Public, Static, HideBySig, SpecialName
     IsKeyPressed(Keys): PrivateScope, Public, Static, HideBySig
     IsControlPressed(Int32, Control): PrivateScope, Public, Static, HideBySig
@@ -7290,6 +7349,17 @@ Struct GTA.Control: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldIni
     GTA.Control VehicleSlowMoUpOnly = 335 : Public, Static, Literal, HasDefault
     GTA.Control VehicleSlowMoDownOnly = 336 : Public, Static, Literal, HasDefault
     GTA.Control MapPointOfInterest = 337 : Public, Static, Literal, HasDefault
+Struct GTA.GameVersion: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
+  :System.Enum
+  Fields:
+    Int32 value__ : Public, SpecialName, RTSpecialName
+    GTA.GameVersion Unknown = 0 : Public, Static, Literal, HasDefault
+    GTA.GameVersion VER_1_0_335_2_STEAM = 1 : Public, Static, Literal, HasDefault
+    GTA.GameVersion VER_1_0_335_2_NOSTEAM = 2 : Public, Static, Literal, HasDefault
+    GTA.GameVersion VER_1_0_350_1_STEAM = 3 : Public, Static, Literal, HasDefault
+    GTA.GameVersion VER_1_0_350_2_NOSTEAM = 4 : Public, Static, Literal, HasDefault
+    GTA.GameVersion VER_1_0_372_2_STEAM = 5 : Public, Static, Literal, HasDefault
+    GTA.GameVersion VER_1_0_372_2_NOSTEAM = 6 : Public, Static, Literal, HasDefault
 Struct GTA.RadioStation: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
   :System.Enum
   Fields:
@@ -7495,6 +7565,8 @@ Class GTA.UI: AutoLayout, AnsiClass, Class, Public, Abstract, Sealed, BeforeFiel
     ShowSubtitle(String, Int32): PrivateScope, Public, Static, HideBySig
     ShowSubtitle(String): PrivateScope, Public, Static, HideBySig
     WorldToScreen(Vector3): PrivateScope, Public, Static, HideBySig
+    DrawTexture(String, Int32, Int32, Int32, Point, Size, Single, Color): PrivateScope, Public, Static, HideBySig
+    DrawTexture(String, Int32, Int32, Int32, Point, Size): PrivateScope, Public, Static, HideBySig
 Interface GTA.UIElement: AutoLayout, AnsiClass, Class, Public, ClassSemanticsMask, Abstract, BeforeFieldInit
   Properties:
     System.Drawing.Color Color 'get set' : 
@@ -7987,6 +8059,9 @@ Class GTA.Vehicle: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
   :GTA.Entity
     Void .ctor(Int32): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
   Properties:
+    Single Steering 'get ' : 
+    Single Acceleration 'get ' : 
+    Single CurrentRPM 'get ' : 
     Boolean AlarmActive 'get ' : 
     Boolean HasAlarm 'set' : 
     Int32 LiveryCount 'get ' : 
@@ -8006,10 +8081,14 @@ Class GTA.Vehicle: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     Boolean LeftIndicatorLightOn 'set' : 
     Boolean HandbrakeOn 'set' : 
     Boolean BrakeLightsOn 'set' : 
+    Boolean IsRightHeadLightBroken 'get ' : 
+    Boolean IsLeftHeadLightBroken 'get ' : 
     Single LightsMultiplier 'set' : 
     Boolean HighBeamsOn 'get ' : 
     Boolean LightsOn 'get set' : 
-    Boolean EngineRunning 'set' : 
+    Single EngineTorqueMultiplier 'set' : 
+    Single EnginePowerMultiplier 'set' : 
+    Boolean EngineRunning 'get set' : 
     Boolean IsWanted 'set' : 
     Boolean IsSecondaryColorCustom 'get ' : 
     Boolean IsPrimaryColorCustom 'get ' : 
@@ -8027,6 +8106,7 @@ Class GTA.Vehicle: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     Single DirtLevel 'get set' : 
     Single Speed 'get set' : 
     Boolean IsOnAllWheels 'get ' : 
+    Boolean IsStopped 'get ' : 
     Boolean IsDriveable 'get set' : 
     Boolean IsStolen 'get set' : 
     Boolean IsConvertible 'get ' : 
@@ -8036,6 +8116,15 @@ Class GTA.Vehicle: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     Int32 PassengerSeats 'get ' : 
     Boolean HasRoof 'get ' : 
   Methods:
+    ToggleMod(VehicleToggleMod, Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    IsToggleModOn(VehicleToggleMod): PrivateScope, Public, HideBySig
+    GetModTypeName(VehicleMod): PrivateScope, Public, HideBySig
+    GetToggleModTypeName(VehicleToggleMod): PrivateScope, Public, HideBySig
+    GetModName(VehicleMod, Int32): PrivateScope, Public, HideBySig
+    ClearCustomPrimaryColor(): PrivateScope, Public, HideBySig
+    ClearCustomSecondaryColor(): PrivateScope, Public, HideBySig
+    GetPedOnSeat(VehicleSeat): PrivateScope, Public, HideBySig
+    IsSeatFree(VehicleSeat): PrivateScope, Public, HideBySig
     Repair(): PrivateScope, Public, HideBySig
     Explode(): PrivateScope, Public, HideBySig
     PlaceOnGround(): PrivateScope, Public, HideBySig
@@ -8072,6 +8161,7 @@ Class GTA.Vehicle: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     set_IsStolen(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     get_IsDriveable(): PrivateScope, Public, HideBySig, SpecialName
     set_IsDriveable(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    get_IsStopped(): PrivateScope, Public, HideBySig, SpecialName
     get_IsOnAllWheels(): PrivateScope, Public, HideBySig, SpecialName
     get_Speed(): PrivateScope, Public, HideBySig, SpecialName
     set_Speed(Single): PrivateScope, Public, HideBySig, SpecialName
@@ -8102,11 +8192,16 @@ Class GTA.Vehicle: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     get_IsPrimaryColorCustom(): PrivateScope, Public, HideBySig, SpecialName
     get_IsSecondaryColorCustom(): PrivateScope, Public, HideBySig, SpecialName
     set_IsWanted(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    get_EngineRunning(): PrivateScope, Public, HideBySig, SpecialName
     set_EngineRunning(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    set_EnginePowerMultiplier(Single): PrivateScope, Public, HideBySig, SpecialName
+    set_EngineTorqueMultiplier(Single): PrivateScope, Public, HideBySig, SpecialName
     set_LightsOn(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     get_LightsOn(): PrivateScope, Public, HideBySig, SpecialName
     get_HighBeamsOn(): PrivateScope, Public, HideBySig, SpecialName
     set_LightsMultiplier(Single): PrivateScope, Public, HideBySig, SpecialName
+    get_IsLeftHeadLightBroken(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsRightHeadLightBroken(): PrivateScope, Public, HideBySig, SpecialName
     set_BrakeLightsOn(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     set_HandbrakeOn(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     set_LeftIndicatorLightOn(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
@@ -8134,17 +8229,11 @@ Class GTA.Vehicle: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
     get_LiveryCount(): PrivateScope, Public, HideBySig, SpecialName
     set_HasAlarm(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
     get_AlarmActive(): PrivateScope, Public, HideBySig, SpecialName
+    get_CurrentRPM(): PrivateScope, Public, HideBySig, SpecialName
+    get_Acceleration(): PrivateScope, Public, HideBySig, SpecialName
+    get_Steering(): PrivateScope, Public, HideBySig, SpecialName
     GetMod(VehicleMod): PrivateScope, Public, HideBySig
     SetMod(VehicleMod, Int32, Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
-    ToggleMod(VehicleToggleMod, Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
-    IsToggleModOn(VehicleToggleMod): PrivateScope, Public, HideBySig
-    GetModTypeName(VehicleMod): PrivateScope, Public, HideBySig
-    GetToggleModTypeName(VehicleToggleMod): PrivateScope, Public, HideBySig
-    GetModName(VehicleMod, Int32): PrivateScope, Public, HideBySig
-    ClearCustomPrimaryColor(): PrivateScope, Public, HideBySig
-    ClearCustomSecondaryColor(): PrivateScope, Public, HideBySig
-    GetPedOnSeat(VehicleSeat): PrivateScope, Public, HideBySig
-    IsSeatFree(VehicleSeat): PrivateScope, Public, HideBySig
 Struct GTA.VehicleSeat: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
   :System.Enum
   Fields:
@@ -8536,16 +8625,23 @@ Class GTA.World: AutoLayout, AnsiClass, Class, Public, Abstract, Sealed, BeforeF
     set_RenderingCamera(Camera): PrivateScope, Public, Static, HideBySig, SpecialName
     set_Weather(Weather): PrivateScope, Public, Static, HideBySig, SpecialName
     GetActiveBlips(): PrivateScope, Public, Static, HideBySig
+    GetAllPeds(): PrivateScope, Public, Static, HideBySig
+    GetNearbyPeds(Vector3, Single): PrivateScope, Public, Static, HideBySig
     GetNearbyPeds(Ped, Single, Int32): PrivateScope, Public, Static, HideBySig
     GetNearbyPeds(Ped, Single): PrivateScope, Public, Static, HideBySig
+    GetAllVehicles(): PrivateScope, Public, Static, HideBySig
+    GetNearbyVehicles(Vector3, Single): PrivateScope, Public, Static, HideBySig
     GetNearbyVehicles(Ped, Single, Int32): PrivateScope, Public, Static, HideBySig
     GetNearbyVehicles(Ped, Single): PrivateScope, Public, Static, HideBySig
+    GetAllProps(): PrivateScope, Public, Static, HideBySig
+    GetAllEntities(): PrivateScope, Public, Static, HideBySig
     GetClosestPed(Vector3, Single): PrivateScope, Public, Static, HideBySig
     GetClosestVehicle(Vector3, Single): PrivateScope, Public, Static, HideBySig
     GetDistance(Vector3, Vector3): PrivateScope, Public, Static, HideBySig
     GetGroundZ(Vector3): PrivateScope, Public, Static, HideBySig (Obsolete)
     GetGroundHeight(Vector3): PrivateScope, Public, Static, HideBySig
     GetGroundHeight(Vector2): PrivateScope, Public, Static, HideBySig
+    GetNextPositionOnStreet(Vector3): PrivateScope, Public, Static, HideBySig
     CreateBlip(Vector3, Single): PrivateScope, Public, Static, HideBySig
     CreateBlip(Vector3): PrivateScope, Public, Static, HideBySig
     CreateCamera(Vector3, Vector3, Single): PrivateScope, Public, Static, HideBySig
@@ -8574,6 +8670,9 @@ Class GTA.World: AutoLayout, AnsiClass, Class, Public, Abstract, Sealed, BeforeF
     Raycast(Vector3, Vector3, IntersectOptions): PrivateScope, Public, Static, HideBySig
     DrawMarker(MarkerType, Vector3, Vector3, Vector3, Vector3, Color, Boolean(HasFieldMarshal), Boolean(HasFieldMarshal), Int32, Boolean(HasFieldMarshal), String, String, Boolean(HasFieldMarshal)): PrivateScope, Public, Static, HideBySig
     DrawMarker(MarkerType, Vector3, Vector3, Vector3, Vector3, Color): PrivateScope, Public, Static, HideBySig
+    DrawLightWithRange(Vector3, Color, Single, Single): PrivateScope, Public, Static, HideBySig
+    DrawSpotLight(Vector3, Vector3, Color, Single, Single, Single, Single, Single): PrivateScope, Public, Static, HideBySig
+    DrawSpotLightWithShadow(Vector3, Vector3, Color, Single, Single, Single, Single, Single): PrivateScope, Public, Static, HideBySig
 Struct GTA.Relationship: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
   :System.Enum
   Fields:
