@@ -23,7 +23,7 @@ namespace GTAVMod_Speedometer
     public class Metric_Speedometer : Script
     {
         // Constants
-        public const string SCRIPT_VERSION = "2.1.2";
+        public const string SCRIPT_VERSION = "2.1.3";
         const string URL_VERSIONFILE = @"https://raw.githubusercontent.com/LibertyLocked/GTAVMod_Speedometer/release/GTAVMod_Speedometer/version.txt"; // latest ver text
         const int NUM_FONTS = 8;
         const float RAINBOW_FRAMETIME = 0.034f;
@@ -49,6 +49,7 @@ namespace GTAVMod_Speedometer
         bool enableSaving;
         bool useMph;
         int rainbowMode = 0;
+		bool onfootSpeedo;
 
         // Fields for menus
         MySettingsMenu mainMenu;
@@ -109,12 +110,12 @@ namespace GTAVMod_Speedometer
             if (player != null && player.CanControlCharacter && player.IsAlive && player.Character != null)
             {
                 // update and draw
-                if (player.Character.IsInVehicle() || IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
+				if (player.Character.IsInVehicle() || onfootSpeedo || IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
                 {
                     // in veh or riding deer
                     float speed = 0;
                     if (player.Character.IsInVehicle()) speed = player.Character.CurrentVehicle.Speed;
-                    else if (IsPlayerRidingDeer(player.Character)) speed = GetSpeedFromPosChange(player.Character);
+					else if (onfootSpeedo || IsPlayerRidingDeer(player.Character)) speed = GetSpeedFromPosChange(player.Character);
 
                     Update(speed);
                     Draw();
@@ -217,6 +218,7 @@ namespace GTAVMod_Speedometer
                     this.menuKey = (Keys)Enum.Parse(typeof(Keys), settings.GetValue("Core", "MenuKey"), true);
                 this.enableSaving = settings.GetValue("Core", "EnableSaving", true);
                 this.rainbowMode = settings.GetValue("Core", "RainbowMode", 0);
+				this.onfootSpeedo = settings.GetValue("Core", "OnfootSpeedo", false);
 
                 // Parse UI settings
                 this.vAlign = (VerticalAlignment)Enum.Parse(typeof(VerticalAlignment), settings.GetValue("UI", "VertAlign"), true);
@@ -324,8 +326,9 @@ namespace GTAVMod_Speedometer
             btnUseMph.Activated += delegate { useMph = !useMph; UpdateCoreButtons(0); UpdateExtrasButtons(0); };
             MenuButton btnEnableSaving = new MenuButton("");
             btnEnableSaving.Activated += delegate { enableSaving = !enableSaving; UpdateCoreButtons(1); };
-            //MenuButton btnEnableMenu = new MenuButton("Disable Menu Key", delegate { enableMenu = !enableMenu; UpdateCoreButtons(2); });
-            this.coreMenuItems = new GTA.IMenuItem[] { btnUseMph, btnEnableSaving };
+            MenuButton btnOnfootSpeedo = new MenuButton("");
+            btnOnfootSpeedo.Activated += delegate { onfootSpeedo = !onfootSpeedo; UpdateCoreButtons(2); };
+            this.coreMenuItems = new GTA.IMenuItem[] { btnUseMph, btnEnableSaving, btnOnfootSpeedo };
             this.coreMenu = new GTA.Menu("Core Settings", coreMenuItems);
             this.coreMenu.HasFooter = false;
 
@@ -462,7 +465,7 @@ namespace GTAVMod_Speedometer
             btnRainbowMode.Activated += delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); };
             MenuButton btnAccTimer = new MenuButton("0-100kph Timer");
             btnAccTimer.Activated += delegate { wid_accTimer.Toggle(); };
-            MenuButton btnMaxSpeed = new MenuButton("Max Speed Recorder");
+            MenuButton btnMaxSpeed = new MenuButton("Top Speed Recorder");
             btnMaxSpeed.Activated += delegate { wid_maxSpeed.Toggle(); };
             MenuButton btnShowCredits = new MenuButton("Show Credits");
             btnShowCredits.Activated += ShowCredits;
@@ -483,7 +486,7 @@ namespace GTAVMod_Speedometer
         {
             coreMenuItems[0].Caption = "Speed Unit: " + (useMph ? "Imperial" : "Metric");
             coreMenuItems[1].Caption = "Save Odometer: " + (enableSaving ? "On" : "Off");
-            //coreMenuItems[2].Caption = "Enable Menu Key: " + enableMenu;
+            coreMenuItems[2].Caption = "Onfoot Speed: " + (onfootSpeedo ? "On" : "Off");
             ChangeMenuSelectedIndex(coreMenu, selectedIndex);
         }
 
@@ -603,6 +606,7 @@ namespace GTAVMod_Speedometer
                 settings.SetValue("Core", "UseMph", useMph.ToString());
                 settings.SetValue("Core", "DisplayMode", (int)speedoMode);
                 settings.SetValue("Core", "EnableSaving", enableSaving.ToString());
+                settings.SetValue("Core", "OnfootSpeedo", onfootSpeedo.ToString());
                 settings.SetValue("Core", "RainbowMode", rainbowMode);
                 settings.SetValue("UI", "VertAlign", Enum.GetName(typeof(VerticalAlignment), vAlign));
                 settings.SetValue("UI", "HorzAlign", Enum.GetName(typeof(HorizontalAlign), hAlign));
