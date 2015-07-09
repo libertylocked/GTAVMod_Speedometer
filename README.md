@@ -31,6 +31,7 @@ Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN custom
 4. The speedometer still won't show up? Check the ScriptHookVDotNet.log in game root directory and paste me the related logs.
 
 ##CHANGELOG SINCE 2.0: 
+- v2.1.3: Added onfoot speed option
 - v2.1.2: Updated for Script Hook V .NET v1.0
 - v2.1.1: Fixed issues with some nightly builds of Script Hook V .NET
 - v2.1.0: Added 0-100kph(62mph) timer and max speed recorder
@@ -38,8 +39,6 @@ Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN custom
 - v2.0.2: Added "Font Style" to display settings.
 - v2.0.1: Fixed incorrect text for opacity. Fixed config saving with certain parameters.
 
-Does this mod have malware in it? 
-No! It's a .cs file, source code is verifiable. 
 
 Special thanks to: Alexander Blade, XBLToothPik, and the wonderful modding community!
 
