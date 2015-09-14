@@ -1,9 +1,6 @@
 #Simple Metric/Imperial Speedometer
 by libertylocked
 
-###IMPORTANT: 
-Please update your ScriptHookV DotNet to v1.0. Read the troubleshooting section if it doesn't show up! 
-
 ###v2.0: IT'S FINALLY HERE! 
 Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN customizing your speedometer! 
 
