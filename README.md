@@ -1,6 +1,8 @@
 #Simple Metric/Imperial Speedometer
 by libertylocked
 
+[Video Tutorial to Customization](https://www.youtube.com/watch?v=cA6nhYTB050)
+
 ###v2.0: IT'S FINALLY HERE! 
 Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN customizing your speedometer! 
 
