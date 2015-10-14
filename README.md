@@ -25,7 +25,7 @@ Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN custom
 
 ##TROUBLESHOOTING: 
 1. Make sure you have the latest ScriptHookV and ScriptHookVDotNet, and they are placed in game root directory. 
-2. Make sure you have all the required redists for ScriptHookVDotNet installed ([Microsoft .NET Framework 4.5](https://www.microsoft.com/download/details.aspx?id=30653) and [Microsoft Visual C++ Redistributable for Visual Studio 2015 (x64)](https://www.microsoft.com/download/details.aspx?id=48145)) 
+2. Make sure you have all the required redists for ScriptHookVDotNet installed ([Microsoft .NET Framework 4.5.2](https://www.microsoft.com/download/details.aspx?id=42642) and [Microsoft Visual C++ Redistributable for Visual Studio 2013 (x64)](https://www.microsoft.com/download/details.aspx?id=40784)) 
 3. Check the INI config file and make sure all values are valid. Re-download the file if necessary. 
 4. The speedometer still won't show up? Check the ScriptHookVDotNet.log in game root directory and paste me the related logs.
 
