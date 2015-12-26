@@ -10,6 +10,7 @@ Added ingame menu to adjust settings! No more tweaking with INI! HAVE FUN custom
 1. Functional speedometer 
 2. Configurable interface (position, font, color, opacity, etc)
 3. Ingame menu to visually adjust settings. Keybind editable (default F7)
+4. (Optional) Resettable trip meter
 5. Includes 0-100kph/62mph timer, max speed recorder
 6. Shows speed when riding deer with [Ride A Deer](https://www.gta5-mods.com/scripts/ride-a-deer-redux)
 
