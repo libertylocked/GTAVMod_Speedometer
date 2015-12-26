@@ -154,7 +154,7 @@ namespace GTAVMod_Speedometer
                 
                 if (!creditsShown)
                 {
-                    ShowCredits(null, null);
+                    ShowCredits();
                     creditsShown = true;
                 }
             }
@@ -296,9 +296,9 @@ namespace GTAVMod_Speedometer
         {
             // Create main menu
             UIMenuListItem btnToggle = new UIMenuListItem("Toggle Display", new List<dynamic>(Enum.GetNames(typeof(SpeedoMode))), 0);
-            btnToggle.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index) {
+            btnToggle.OnListChanged += delegate(UIMenuListItem item, int index) {
                 speedoMode = (SpeedoMode)(((int)index) % Enum.GetNames(typeof(SpeedoMode)).Length);
-            });
+            };
             UIMenuItem btnClear = new UIMenuItem("Reset Trip Meter");
             btnClear.Activated += delegate { distanceKm = 0; UI.Notify("Trip meter reset"); };
             UIMenuItem btnCore = new UIMenuItem("Core Settings");
@@ -317,19 +317,19 @@ namespace GTAVMod_Speedometer
             UIMenuItem btnBack = new UIMenuItem("Save & Close");
             btnBack.Activated += delegate { SaveSettings(); mainMenu.Visible = false; };
 
-            this.mainMenu = new UIMenu(GetTitle(), "By libertylocked");
+            mainMenu = new UIMenu(GetTitle(), "By libertylocked");
             foreach (UIMenuItem item in new UIMenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack })
             {
-                this.mainMenu.AddItem(item);
+                mainMenu.AddItem(item);
             }
-            this.mainMenu.OnMenuClose += delegate { SaveSettings(); };
+            mainMenu.OnMenuClose += delegate { SaveSettings(); };
 
             // Create core menu
             UIMenuListItem btnUseMph = new UIMenuListItem("Speed Unit", new List<dynamic> { "Imperial", "Metric" }, 0, "Sets the unit between KPH and MPH");
-            btnUseMph.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            btnUseMph.OnListChanged += delegate(UIMenuListItem item, int index)
             {
                 useMph = index % 2 == 0; UpdateAllMenuButtons();;
-            });
+            };
             UIMenuCheckboxItem btnEnableSaving = new UIMenuCheckboxItem("Save Trip Meter", false, "Allows trip meter data to be persistent across game sessions");
             btnEnableSaving.CheckboxEvent += new ItemCheckboxEvent(delegate(UIMenuCheckboxItem item, bool selected)
             {
@@ -341,7 +341,7 @@ namespace GTAVMod_Speedometer
                 onfootSpeedo = selected;
             });
 
-            this.coreMenu = new UIMenu(GetTitle(), "Core Settings");
+            coreMenu = new UIMenu(GetTitle(), "Core Settings");
             foreach (UIMenuItem item in new UIMenuItem[] { btnUseMph, btnEnableSaving, btnOnfootSpeedo })
             {
                 coreMenu.AddItem(item);
@@ -350,20 +350,20 @@ namespace GTAVMod_Speedometer
 
             // Create display menu
             UIMenuListItem btnVAlign = new UIMenuListItem("Vertical Alignment", new List<dynamic>(Enum.GetNames(typeof(VerticalAlignment))), 0, "Determines how speedometer display will be aligned vertically");
-            btnVAlign.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            btnVAlign.OnListChanged += delegate(UIMenuListItem item, int index)
             {
                 vAlign = (VerticalAlignment)(((int)index) % 3); posOffset.Y = 0; SetupUIElements();
-            });
+            };
             UIMenuListItem btnHAlign = new UIMenuListItem("Horizontal Alignment", new List<dynamic>(Enum.GetNames(typeof(HorizontalAlign))), 0, "Determines how speedometer display will be aligned horizontally");
-            btnHAlign.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            btnHAlign.OnListChanged += delegate(UIMenuListItem item, int index)
             {
                 hAlign = (HorizontalAlign)(((int)index) % 3); posOffset.X = 0; SetupUIElements();
-            });
+            };
             UIMenuListItem btnFontStyle = new UIMenuListItem("Font Style", new List<dynamic>(Enum.GetNames(typeof(GTA.Font))), 0, "Sets the font on speedometer display");
-            btnFontStyle.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            btnFontStyle.OnListChanged += delegate(UIMenuListItem item, int index)
             {
                 fontStyle = (int)((GTA.Font[])Enum.GetValues(typeof(GTA.Font)))[index]; SetupUIElements();
-            });
+            };
             //MenuButton btnFontSize = new MenuButton("Font Size >");
             //btnFontSize.Activated += delegate
             //{
@@ -414,7 +414,7 @@ namespace GTAVMod_Speedometer
             //MenuButton btnRstDefault = new MenuButton("Restore to Default");
             //btnRstDefault.Activated += delegate { ResetUIToDefault(); UpdateDispButtons(8); };
 
-            this.dispMenu = new UIMenu(GetTitle(), "Display Settings");
+            dispMenu = new UIMenu(GetTitle(), "Display Settings");
             foreach (UIMenuItem item in new UIMenuItem[] { btnVAlign, btnHAlign, btnFontStyle/*, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault*/ })
             {
                 dispMenu.AddItem(item);
@@ -483,25 +483,34 @@ namespace GTAVMod_Speedometer
             //this.colorMenu.HasFooter = false;
             //this.colorMenu.HeaderHeight += 20;
 
-            //// Create extras menu
-            //MenuButton btnRainbowMode = new MenuButton("");
-            //btnRainbowMode.Activated += delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); };
-            //MenuButton btnAccTimer = new MenuButton("0-100kph Timer");
-            //btnAccTimer.Activated += delegate { wid_accTimer.Toggle(); };
-            //MenuButton btnMaxSpeed = new MenuButton("Top Speed Recorder");
-            //btnMaxSpeed.Activated += delegate { wid_maxSpeed.Toggle(); };
-            //MenuButton btnShowCredits = new MenuButton("Show Credits");
-            //btnShowCredits.Activated += ShowCredits;
-            //MenuButton btnUpdates = new MenuButton("Check for Updates");
-            //btnUpdates.Activated += CheckForUpdates;
-            //this.extrasMenuItems = new GTA.IMenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates };
-            //this.extrasMenu = new GTA.Menu("Extras", extrasMenuItems);
-            //this.extrasMenu.HasFooter = false;
+            // Create extras menu
+            UIMenuListItem btnRainbowMode = new UIMenuListItem("Rainbow Mode", new List<dynamic> { "Off", "1x", "2x", "4x", "8x", "16x", "32x", "64x" }, 0);
+            btnRainbowMode.OnListChanged += delegate(UIMenuListItem item, int index)
+            {
+                rainbowMode = index;
+                SetupUIElements();
+            };
+            UIMenuItem btnAccTimer = new UIMenuItem("0-100kph/62mph Timer");
+            btnAccTimer.Activated += delegate { wid_accTimer.Toggle(); };
+            UIMenuItem btnMaxSpeed = new UIMenuItem("Top Speed Recorder");
+            btnMaxSpeed.Activated += delegate { wid_maxSpeed.Toggle(); };
+            UIMenuItem btnShowCredits = new UIMenuItem("Show Credits");
+            btnShowCredits.Activated += delegate { ShowCredits(); };
+            UIMenuItem btnUpdates = new UIMenuItem("Check for Updates");
+            btnUpdates.Activated += delegate { CheckForUpdates(); };
 
-            this.menuPool = new MenuPool();
+            extrasMenu = new UIMenu(GetTitle(), "Extras");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates })
+            {
+                extrasMenu.AddItem(item);
+            }
+            mainMenu.BindMenuToItem(extrasMenu, btnExtras);
+
+            menuPool = new MenuPool();
             menuPool.Add(mainMenu);
             menuPool.Add(coreMenu);
             menuPool.Add(dispMenu);
+            menuPool.Add(extrasMenu);
         }
 
         void UpdateAllMenuButtons()
@@ -513,6 +522,8 @@ namespace GTAVMod_Speedometer
             ((UIMenuListItem)dispMenu.MenuItems[0]).Index = (int)vAlign;
             ((UIMenuListItem)dispMenu.MenuItems[1]).Index = (int)hAlign;
             ((UIMenuListItem)dispMenu.MenuItems[2]).Index = Array.IndexOf(Enum.GetValues(typeof(GTA.Font)), (GTA.Font)fontStyle);
+
+            ((UIMenuListItem)extrasMenu.MenuItems[0]).Index = rainbowMode;
         }
 
         //void UpdateDispButtons()
@@ -574,12 +585,12 @@ namespace GTAVMod_Speedometer
             catch { }
         }
 
-        void ShowCredits(object sender, EventArgs e)
+        void ShowCredits()
         {
             UI.Notify("Speedometer ~r~v" + SCRIPT_VERSION + " ~s~by ~b~libertylocked");
         }
 
-        void CheckForUpdates(object sender, EventArgs e)
+        void CheckForUpdates()
         {
             if (updateCheckState != UpdateCheckState.Stopped) return;
             try
