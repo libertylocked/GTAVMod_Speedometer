@@ -1,7 +1,6 @@
 ﻿/*
  * Simple Metric/Imperial Speedometer
  * Author: libertylocked
- * Version: 2.1.3
  * License: GPLv2
  */
 using System;
@@ -11,19 +10,21 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using GTA;
 using GTA.Math;
 using GTA.Native;
+using NativeUI;
 
 namespace GTAVMod_Speedometer
 {
     public class Metric_Speedometer : Script
     {
         // Constants
-        public const string SCRIPT_VERSION = "2.1.3";
+        public const string SCRIPT_VERSION = "2.2.0";
         const string URL_VERSIONFILE = @"https://raw.githubusercontent.com/LibertyLocked/GTAVMod_Speedometer/release/GTAVMod_Speedometer/version.txt"; // latest ver text
         const int NUM_FONTS = 8;
         const float RAINBOW_FRAMETIME = 0.034f;
@@ -52,9 +53,8 @@ namespace GTAVMod_Speedometer
 		bool onfootSpeedo;
 
         // Fields for menus
-        MySettingsMenu mainMenu;
-        GTA.Menu coreMenu, dispMenu, colorMenu, extrasMenu;
-        GTA.IMenuItem[] mainMenuItems, coreMenuItems, dispMenuItems, colorMenuItems, extrasMenuItems;
+        MenuPool menuPool;
+        UIMenu coreMenu, dispMenu, colorMenu, extrasMenu, mainMenu;
         bool isChangingBackcolor;
 
         // Fields for UI settings
@@ -75,14 +75,6 @@ namespace GTAVMod_Speedometer
             SetupUIElements();
             SetupMenus();
 
-            UpKey = Keys.NumPad8;
-            DownKey = Keys.NumPad2;
-            LeftKey = Keys.NumPad4;
-            RightKey = Keys.NumPad6;
-            ActivateKey = Keys.NumPad5;
-            BackKey = Keys.NumPad0;
-
-            this.View.MenuTransitions = false; // because transition looksnice/doesnotlooknice
             this.Tick += OnTick;
             this.KeyDown += OnKeyDown;
 
@@ -94,6 +86,8 @@ namespace GTAVMod_Speedometer
 
         void OnTick(object sender, EventArgs e)
         {
+            menuPool.ProcessMenus();
+
             if (enableSaving)
             {
                 bool isPausePressed = Function.Call<bool>(Hash.IS_DISABLED_CONTROL_JUST_PRESSED, 2, 199) ||
@@ -111,12 +105,12 @@ namespace GTAVMod_Speedometer
             if (player != null && player.CanControlCharacter && player.IsAlive && player.Character != null)
             {
                 // update and draw
-				if (player.Character.IsInVehicle() || onfootSpeedo || IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
+                if (player.Character.IsInVehicle() || onfootSpeedo || Utils.IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
                 {
                     // in veh or riding deer
                     float speed = 0;
                     if (player.Character.IsInVehicle()) speed = player.Character.CurrentVehicle.Speed;
-					else if (onfootSpeedo || IsPlayerRidingDeer(player.Character)) speed = GetSpeedFromPosChange(player.Character);
+                    else if (onfootSpeedo || Utils.IsPlayerRidingDeer(player.Character)) speed = GetSpeedFromPosChange(player.Character);
 
                     Update(speed);
                     Draw();
@@ -134,7 +128,7 @@ namespace GTAVMod_Speedometer
                         {
                             rainbowTimeCounter = 0;
                             rainbowHueBp = (rainbowHueBp + (int)(1 * Math.Pow(2, rainbowMode - 1) * speed)) % 10000;
-                            speedText.Color = HSLA2RGBA((double)rainbowHueBp / 10000, 1, 0.5, forecolor.A / 255.0);
+                            speedText.Color = Utils.HSLA2RGBA((double)rainbowHueBp / 10000, 1, 0.5, forecolor.A / 255.0);
                         }
                     }
                 }
@@ -154,13 +148,12 @@ namespace GTAVMod_Speedometer
         {
             if (enableMenu && e.KeyCode == menuKey)
             {
-                this.View.CloseAllMenus();
-                this.View.AddMenu(mainMenu);
-                UpdateMainButtons(0);
-                
+                mainMenu.Visible = true;
+                UpdateAllMenuButtons();
+
                 if (!creditsShown)
                 {
-                    ShowCredits(null, null);
+                    //ShowCredits();
                     creditsShown = true;
                 }
             }
@@ -172,14 +165,14 @@ namespace GTAVMod_Speedometer
 
         void Update(float speedThisFrame)
         {
-            float speedKph = MsToKmh(speedThisFrame); // convert from m/s to km/h
+            float speedKph = Utils.MsToKmh(speedThisFrame); // convert from m/s to km/h
             float distanceLastFrame = speedThisFrame * Game.LastFrameTime / 1000; // increment odometer counter
             distanceKm += distanceLastFrame;
 
             if (useMph)
             {
-                float speedMph = KmToMiles(speedKph);
-                float distanceMiles = KmToMiles(distanceKm);
+                float speedMph = Utils.KmToMiles(speedKph);
+                float distanceMiles = Utils.KmToMiles(distanceKm);
                 speedText.Caption = Math.Floor(speedMph).ToString("0 " + mphText); // floor speed mph
                 if (speedoMode == SpeedoMode.Detailed)
                 {
@@ -295,232 +288,284 @@ namespace GTAVMod_Speedometer
             fontStyle = 4;
             backcolor = Color.FromArgb(150, 237, 239, 241);
             forecolor = Color.FromArgb(255, 0, 0, 0);
+            kphText = "km/h";
+            mphText = "mph";
             SetupUIElements();
         }
 
         void SetupMenus()
         {
             // Create main menu
-            MenuButton btnToggle = new MenuButton("");
-            btnToggle.Activated += delegate { speedoMode = (SpeedoMode)(((int)speedoMode + 1) % Enum.GetNames(typeof(SpeedoMode)).Length); UpdateMainButtons(0); };
-            MenuButton btnClear = new MenuButton("Reset Trip Meter");
+            UIMenuListItem btnToggle = new UIMenuListItem("Toggle Display", new List<dynamic>(Enum.GetNames(typeof(SpeedoMode))), 0);
+            btnToggle.OnListChanged += delegate(UIMenuListItem item, int index) {
+                speedoMode = (SpeedoMode)(((int)index) % Enum.GetNames(typeof(SpeedoMode)).Length);
+            };
+            UIMenuItem btnClear = new UIMenuItem("Reset Trip Meter");
             btnClear.Activated += delegate { distanceKm = 0; UI.Notify("Trip meter reset"); };
-            MenuButton btnCore = new MenuButton("Core Settings >");
-            btnCore.Activated += delegate { View.AddMenu(coreMenu); UpdateCoreButtons(0); };
-            MenuButton btnDisp = new MenuButton("Display Settings >");
-            btnDisp.Activated += delegate { View.AddMenu(dispMenu); UpdateDispButtons(0); };
-            MenuButton btnExtras = new MenuButton("Extras >");
-            btnExtras.Activated += delegate { View.AddMenu(extrasMenu); UpdateExtrasButtons(0); };
-            MenuButton btnReload = new MenuButton("Reload");
+            UIMenuItem btnCore = new UIMenuItem("Core Settings");
+            btnCore.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnDisp = new UIMenuItem("Display Settings");
+            btnDisp.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnExtras = new UIMenuItem("Extras");
+            btnExtras.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnReload = new UIMenuItem("Reload");
             btnReload.Activated += delegate
             {
                 ParseSettings(); SetupUIElements();
-                UpdateMainButtons(5);
+                UpdateAllMenuButtons();
                 UI.Notify("Speedometer reloaded");
             };
-            MenuButton btnBack = new MenuButton("Save & Exit");
-            btnBack.Activated += delegate { View.CloseAllMenus(); };
-            this.mainMenuItems = new GTA.IMenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack };
-            this.mainMenu = new MySettingsMenu("Speedometer v" + SCRIPT_VERSION, mainMenuItems, this);
-            this.mainMenu.HasFooter = false;
+            UIMenuItem btnBack = new UIMenuItem("Save & Close");
+            btnBack.Activated += delegate { SaveSettings(); mainMenu.Visible = false; };
+
+            mainMenu = new UIMenu(GetTitle(), "By libertylocked");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack })
+            {
+                mainMenu.AddItem(item);
+            }
+            mainMenu.OnMenuClose += delegate { SaveSettings(); };
 
             // Create core menu
-            MenuButton btnUseMph = new MenuButton("");
-            btnUseMph.Activated += delegate { useMph = !useMph; UpdateCoreButtons(0); UpdateExtrasButtons(0); };
-            MenuButton btnEnableSaving = new MenuButton("");
-            btnEnableSaving.Activated += delegate { enableSaving = !enableSaving; UpdateCoreButtons(1); };
-            MenuButton btnOnfootSpeedo = new MenuButton("");
-            btnOnfootSpeedo.Activated += delegate { onfootSpeedo = !onfootSpeedo; UpdateCoreButtons(2); };
-            this.coreMenuItems = new GTA.IMenuItem[] { btnUseMph, btnEnableSaving, btnOnfootSpeedo };
-            this.coreMenu = new GTA.Menu("Core Settings", coreMenuItems);
-            this.coreMenu.HasFooter = false;
+            UIMenuListItem btnUseMph = new UIMenuListItem("Speed Unit", new List<dynamic> { "Imperial", "Metric" }, 0, "Sets the unit between KPH and MPH");
+            btnUseMph.OnListChanged += delegate(UIMenuListItem item, int index)
+            {
+                useMph = index % 2 == 0; UpdateAllMenuButtons();;
+            };
+            UIMenuCheckboxItem btnEnableSaving = new UIMenuCheckboxItem("Save Trip Meter", false, "Allows trip meter data to be persistent across game sessions");
+            btnEnableSaving.CheckboxEvent += new ItemCheckboxEvent(delegate(UIMenuCheckboxItem item, bool selected)
+            {
+                enableSaving = selected;
+            });
+            UIMenuCheckboxItem btnOnfootSpeedo = new UIMenuCheckboxItem("Onfoot Speed", false, "Shows speed when player is on foot");
+            btnOnfootSpeedo.CheckboxEvent += new ItemCheckboxEvent(delegate(UIMenuCheckboxItem item, bool selected)
+            {
+                onfootSpeedo = selected;
+            });
+
+            coreMenu = new UIMenu(GetTitle(), "Core Settings");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnUseMph, btnEnableSaving, btnOnfootSpeedo })
+            {
+                coreMenu.AddItem(item);
+            }
+            mainMenu.BindMenuToItem(coreMenu, btnCore);
 
             // Create display menu
-            MenuButton btnVAlign = new MenuButton("");
-            btnVAlign.Activated += delegate { vAlign = (VerticalAlignment)(((int)vAlign + 1) % 3); posOffset.Y = 0; SetupUIElements(); UpdateDispButtons(0); };
-            MenuButton btnHAlign = new MenuButton("");
-            btnHAlign.Activated += delegate { hAlign = (HorizontalAlign)(((int)hAlign + 1) % 3); posOffset.X = 0; SetupUIElements(); UpdateDispButtons(1); };
-            MenuButton btnFontStyle = new MenuButton("");
-            btnFontStyle.Activated += delegate
+            UIMenuListItem btnVAlign = new UIMenuListItem("Vertical Alignment", new List<dynamic>(Enum.GetNames(typeof(VerticalAlignment))), 0, "Determines how speedometer display will be aligned vertically");
+            btnVAlign.OnListChanged += delegate(UIMenuListItem item, int index)
             {
-                GTA.Font[] fonts = (GTA.Font[])Enum.GetValues(typeof(GTA.Font));
-                int currIndex = Array.IndexOf(fonts, (GTA.Font)fontStyle);
-                int nextIndex = (int)fonts[(currIndex + 1) % fonts.Length];
-                fontStyle = nextIndex; SetupUIElements(); UpdateDispButtons(2);
+                vAlign = (VerticalAlignment)(((int)index) % 3); posOffset.Y = 0; SetupUIElements();
             };
-            MenuButton btnFontSize = new MenuButton("Font Size >");
-            btnFontSize.Activated += delegate
+            UIMenuListItem btnHAlign = new UIMenuListItem("Horizontal Alignment", new List<dynamic>(Enum.GetNames(typeof(HorizontalAlign))), 0, "Determines how speedometer display will be aligned horizontally");
+            btnHAlign.OnListChanged += delegate(UIMenuListItem item, int index)
             {
-                MenuButton btnAddSize = new MenuButton("+ Font Size");
-                btnAddSize.Activated += delegate { fontSize += 0.02f; SetupUIElements(); };
-                MenuButton btnSubSize = new MenuButton("- Font Size");
-                btnSubSize.Activated += delegate { fontSize -= 0.02f; SetupUIElements(); };
-                GTA.Menu sizeMenu = new GTA.Menu("Font Size", new GTA.IMenuItem[] { btnAddSize, btnSubSize });
-                sizeMenu.HasFooter = false;
-                View.AddMenu(sizeMenu);
+                hAlign = (HorizontalAlign)(((int)index) % 3); posOffset.X = 0; SetupUIElements();
             };
-            MenuButton btnPanelSize = new MenuButton("Panel Size >");
-            btnPanelSize.Activated += delegate
+            UIMenuListItem btnFontStyle = new UIMenuListItem("Font Style", new List<dynamic>(Enum.GetNames(typeof(GTA.Font))), 0, "Sets the font on speedometer display");
+            btnFontStyle.OnListChanged += delegate(UIMenuListItem item, int index)
             {
-                MenuButton btnAddWidth = new MenuButton("+ Panel Width");
-                btnAddWidth.Activated += delegate { pWidth += 2; SetupUIElements(); };
-                MenuButton btnSubWidth = new MenuButton("- Panel Width");
-                btnSubWidth.Activated += delegate { pWidth -= 2; SetupUIElements(); };
-                MenuButton btnAddHeight = new MenuButton("+ Panel Height");
-                btnAddHeight.Activated += delegate { pHeight += 2; SetupUIElements(); };
-                MenuButton btnSubHeight = new MenuButton("- Panel Height");
-                btnSubHeight.Activated += delegate { pHeight -= 2; SetupUIElements(); };
-                GTA.Menu panelSizeMenu = new GTA.Menu("Panel Size", new GTA.IMenuItem[] { btnAddWidth, btnSubWidth, btnAddHeight, btnSubHeight });
-                panelSizeMenu.HasFooter = false;
-                View.AddMenu(panelSizeMenu);
+                fontStyle = (int)((GTA.Font[])Enum.GetValues(typeof(GTA.Font)))[index]; SetupUIElements();
             };
-            MenuButton btnAplyOffset = new MenuButton("Set Offset >");
-            btnAplyOffset.Activated += delegate
+            UIMenuItem btnFontSize = new UIMenuItem("Font Size", "Sets the size of text on speedometer");
+            btnFontSize.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnPanelSize = new UIMenuItem("Panel Size", "Sets the size of the back rectangle");
+            btnPanelSize.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnOffset = new UIMenuItem("Apply Offset", "Applies an offset to speedometer display, to fine tune its position");
+            btnOffset.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnBackcolor = new UIMenuItem("Back Color", "Sets the color of the background panel");
+            btnBackcolor.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            btnBackcolor.Activated += delegate { isChangingBackcolor = true; UpdateAllMenuButtons(); };
+            UIMenuItem btnForecolor = new UIMenuItem("Fore Color", "Sets the color of the text");
+            btnForecolor.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            btnForecolor.Activated += delegate { isChangingBackcolor = false; UpdateAllMenuButtons(); };
+            UIMenuItem btnTxt = new UIMenuItem("Speed Unit Text", "Changes the text for speed unit");
+            btnTxt.Activated += delegate 
             {
-                MenuButton btnOffsetUp = new MenuButton("Move Up");
-                btnOffsetUp.Activated += delegate { posOffset.Y += -2; SetupUIElements(); };
-                MenuButton btnOffsetDown = new MenuButton("Move Down");
-                btnOffsetDown.Activated += delegate { posOffset.Y += 2; SetupUIElements(); };
-                MenuButton btnOffsetLeft = new MenuButton("Move Left");
-                btnOffsetLeft.Activated += delegate { posOffset.X += -2; SetupUIElements(); };
-                MenuButton btnOffsetRight = new MenuButton("Move Right");
-                btnOffsetRight.Activated += delegate { posOffset.X += 2; SetupUIElements(); };
-                MenuButton btnOffsetClr = new MenuButton("Clear Offset");
-                btnOffsetClr.Activated += delegate { posOffset.X = 0; posOffset.Y = 0; SetupUIElements(); };
-                GTA.Menu offsetMenu = new GTA.Menu("Set Offset", new GTA.IMenuItem[] { btnOffsetUp, btnOffsetDown, btnOffsetLeft, btnOffsetRight, btnOffsetClr });
-                offsetMenu.HasFooter = false;
-                View.AddMenu(offsetMenu);
+                string input = Game.GetUserInput(WindowTitle.CELL_EMASH_BOD, useMph ? mphText : kphText, 20);
+                if (useMph) mphText = input;
+                else kphText = input;
             };
-            MenuButton btnBackcolor = new MenuButton("Back Color >");
-            btnBackcolor.Activated += delegate { isChangingBackcolor = true; View.AddMenu(colorMenu); UpdateColorButtons(0); };
-            MenuButton btnForecolor = new MenuButton("Fore Color >");
-            btnForecolor.Activated += delegate { isChangingBackcolor = false; View.AddMenu(colorMenu); UpdateColorButtons(0); };
-            MenuButton btnRstDefault = new MenuButton("Restore to Default");
-            btnRstDefault.Activated += delegate { ResetUIToDefault(); UpdateDispButtons(8); };
-            this.dispMenuItems = new GTA.IMenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
-            this.dispMenu = new GTA.Menu("Display Settings", dispMenuItems);
-            this.dispMenu.HasFooter = false;
+            UIMenuItem btnRstDefault = new UIMenuItem("Restore to Default", "Resets UI to default settings");
+            btnRstDefault.Activated += delegate { ResetUIToDefault(); UpdateAllMenuButtons(); };
+
+            dispMenu = new UIMenu(GetTitle(), "Display Settings");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnFontSize, btnPanelSize, btnOffset, btnBackcolor, btnForecolor, btnTxt, btnRstDefault })
+            {
+                dispMenu.AddItem(item);
+            }
+            mainMenu.BindMenuToItem(dispMenu, btnDisp);
+
+            // Create font size menu
+            UIMenuItem btnAddSize = new UIMenuItem("+ Font Size");
+            btnAddSize.Activated += delegate { fontSize += 0.02f; SetupUIElements(); };
+            UIMenuItem btnSubSize = new UIMenuItem("- Font Size");
+            btnSubSize.Activated += delegate { fontSize -= 0.02f; SetupUIElements(); };
+            UIMenu sizeMenu = new UIMenu(GetTitle(), "Font Size");
+            sizeMenu.AddItem(btnAddSize);
+            sizeMenu.AddItem(btnSubSize);
+            dispMenu.BindMenuToItem(sizeMenu, btnFontSize);
+
+            // Create panel size menu
+            UIMenuItem btnAddWidth = new UIMenuItem("+ Panel Width");
+            btnAddWidth.Activated += delegate { pWidth += 2; SetupUIElements(); };
+            UIMenuItem btnSubWidth = new UIMenuItem("- Panel Width");
+            btnSubWidth.Activated += delegate { pWidth -= 2; SetupUIElements(); };
+            UIMenuItem btnAddHeight = new UIMenuItem("+ Panel Height");
+            btnAddHeight.Activated += delegate { pHeight += 2; SetupUIElements(); };
+            UIMenuItem btnSubHeight = new UIMenuItem("- Panel Height");
+            btnSubHeight.Activated += delegate { pHeight -= 2; SetupUIElements(); };
+            UIMenu panelSizeMenu = new UIMenu(GetTitle(), "Panel Size");
+            panelSizeMenu.AddItem(btnAddWidth);
+            panelSizeMenu.AddItem(btnSubWidth);
+            panelSizeMenu.AddItem(btnAddHeight);
+            panelSizeMenu.AddItem(btnSubHeight);
+            dispMenu.BindMenuToItem(panelSizeMenu, btnPanelSize);
+
+            // Create offset menu
+            UIMenuItem btnOffsetUp = new UIMenuItem("Move Up");
+            btnOffsetUp.Activated += delegate { posOffset.Y += -2; SetupUIElements(); };
+            UIMenuItem btnOffsetDown = new UIMenuItem("Move Down");
+            btnOffsetDown.Activated += delegate { posOffset.Y += 2; SetupUIElements(); };
+            UIMenuItem btnOffsetLeft = new UIMenuItem("Move Left");
+            btnOffsetLeft.Activated += delegate { posOffset.X += -2; SetupUIElements(); };
+            UIMenuItem btnOffsetRight = new UIMenuItem("Move Right");
+            btnOffsetRight.Activated += delegate { posOffset.X += 2; SetupUIElements(); };
+            UIMenuItem btnOffsetClr = new UIMenuItem("Clear Offset");
+            btnOffsetClr.Activated += delegate { posOffset.X = 0; posOffset.Y = 0; SetupUIElements(); };
+            UIMenu offsetMenu = new UIMenu(GetTitle(), "Apply Offset");
+            offsetMenu.AddItem(btnOffsetUp);
+            offsetMenu.AddItem(btnOffsetDown);
+            offsetMenu.AddItem(btnOffsetLeft);
+            offsetMenu.AddItem(btnOffsetRight);
+            offsetMenu.AddItem(btnOffsetClr);
+            dispMenu.BindMenuToItem(offsetMenu, btnOffset);
 
             // Create color menu
-            MenuButton btnAddR = new MenuButton("+ R");
+            UIMenuItem btnAddR = new UIMenuItem("+ R");
             btnAddR.Activated += delegate 
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 5, 0, 0);
-                else forecolor = IncrementARGB(forecolor, 0, 5, 0, 0);
-                SetupUIElements(); UpdateColorButtons(0);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 5, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 5, 0, 0);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            MenuButton btnSubR = new MenuButton("- R");
+            UIMenuItem btnSubR = new UIMenuItem("- R");
             btnSubR.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, -5, 0, 0);
-                else forecolor = IncrementARGB(forecolor, 0, -5, 0, 0);
-                SetupUIElements(); UpdateColorButtons(1);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, -5, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, -5, 0, 0);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            MenuButton btnAddG = new MenuButton("+ G");
+            UIMenuItem btnAddG = new UIMenuItem("+ G");
             btnAddG.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 5, 0);
-                else forecolor = IncrementARGB(forecolor, 0, 0, 5, 0);
-                SetupUIElements(); UpdateColorButtons(2);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 5, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 5, 0);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            MenuButton btnSubG = new MenuButton("- G");
+            UIMenuItem btnSubG = new UIMenuItem("- G");
             btnSubG.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, -5, 0);
-                else forecolor = IncrementARGB(forecolor, 0, 0, -5, 0);
-                SetupUIElements(); UpdateColorButtons(3);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, -5, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, -5, 0);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            MenuButton btnAddB = new MenuButton("+ B");
+            UIMenuItem btnAddB = new UIMenuItem("+ B");
             btnAddB.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 0, 5);
-                else forecolor = IncrementARGB(forecolor, 0, 0, 0, 5);
-                SetupUIElements(); UpdateColorButtons(4);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, 5);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, 5);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            MenuButton btnSubB = new MenuButton("- B");
+            UIMenuItem btnSubB = new UIMenuItem("- B");
             btnSubB.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 0, -5);
-                else forecolor = IncrementARGB(forecolor, 0, 0, 0, -5);
-                SetupUIElements(); UpdateColorButtons(5);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, -5);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, -5);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            MenuButton btnAddA = new MenuButton("+ Opacity");
+            UIMenuItem btnAddA = new UIMenuItem("+ Opacity");
             btnAddA.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 5, 0, 0, 0);
-                else forecolor = IncrementARGB(forecolor, 5, 0, 0, 0);
-                SetupUIElements(); UpdateColorButtons(6);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 5, 0, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 5, 0, 0, 0);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            MenuButton btnSubA = new MenuButton("- Opacity");
+            UIMenuItem btnSubA = new UIMenuItem("- Opacity");
             btnSubA.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, -5, 0, 0, 0);
-                else forecolor = IncrementARGB(forecolor, -5, 0, 0, 0);
-                SetupUIElements(); UpdateColorButtons(7);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, -5, 0, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, -5, 0, 0, 0);
+                SetupUIElements(); UpdateAllMenuButtons();
             };
-            this.colorMenuItems = new GTA.IMenuItem[] { btnAddR, btnSubR, btnAddG, btnSubG, btnAddB, btnSubB, btnAddA, btnSubA };
-            this.colorMenu = new GTA.Menu("", colorMenuItems);
-            this.colorMenu.HasFooter = false;
-            this.colorMenu.HeaderHeight += 20;
+            colorMenu = new UIMenu(GetTitle(), "Set Color");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnAddR, btnSubR, btnAddG, btnSubG, btnAddB, btnSubB, btnAddA, btnSubA })
+            {
+                colorMenu.AddItem(item);
+            }
+            dispMenu.BindMenuToItem(colorMenu, btnBackcolor);
+            dispMenu.BindMenuToItem(colorMenu, btnForecolor);
 
             // Create extras menu
-            MenuButton btnRainbowMode = new MenuButton("");
-            btnRainbowMode.Activated += delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); };
-            MenuButton btnAccTimer = new MenuButton("0-100kph Timer");
+            UIMenuListItem btnRainbowMode = new UIMenuListItem("Rainbow Mode", new List<dynamic> { "Off", "1x", "2x", "4x", "8x", "16x", "32x", "64x" }, 0);
+            btnRainbowMode.OnListChanged += delegate(UIMenuListItem item, int index)
+            {
+                rainbowMode = index;
+                SetupUIElements();
+            };
+            UIMenuItem btnAccTimer = new UIMenuItem("0-100kph/62mph Timer");
             btnAccTimer.Activated += delegate { wid_accTimer.Toggle(); };
-            MenuButton btnMaxSpeed = new MenuButton("Top Speed Recorder");
+            UIMenuItem btnMaxSpeed = new UIMenuItem("Top Speed Recorder");
             btnMaxSpeed.Activated += delegate { wid_maxSpeed.Toggle(); };
-            MenuButton btnShowCredits = new MenuButton("Show Credits");
-            btnShowCredits.Activated += ShowCredits;
-            MenuButton btnUpdates = new MenuButton("Check for Updates");
-            btnUpdates.Activated += CheckForUpdates;
-            this.extrasMenuItems = new GTA.IMenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates };
-            this.extrasMenu = new GTA.Menu("Extras", extrasMenuItems);
-            this.extrasMenu.HasFooter = false;
+            UIMenuItem btnShowCredits = new UIMenuItem("Show Credits");
+            btnShowCredits.Activated += delegate { ShowCredits(); };
+            UIMenuItem btnUpdates = new UIMenuItem("Check for Updates");
+            btnUpdates.Activated += delegate { CheckForUpdates(); };
+
+            extrasMenu = new UIMenu(GetTitle(), "Extras");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates })
+            {
+                extrasMenu.AddItem(item);
+            }
+            mainMenu.BindMenuToItem(extrasMenu, btnExtras);
+
+            menuPool = new MenuPool();
+            menuPool.Add(mainMenu);
+            menuPool.Add(coreMenu);
+            menuPool.Add(dispMenu);
+            menuPool.Add(extrasMenu);
+            menuPool.Add(sizeMenu);
+            menuPool.Add(panelSizeMenu);
+            menuPool.Add(offsetMenu);
+            menuPool.Add(colorMenu);
         }
 
-        void UpdateMainButtons(int selectedIndex)
+        void UpdateAllMenuButtons()
         {
-            mainMenuItems[0].Caption = "Toggle Display: " + speedoMode.ToString();
-            ChangeMenuSelectedIndex(mainMenu, selectedIndex);
-        }
+            ((UIMenuListItem)mainMenu.MenuItems[0]).Index = (int)speedoMode;
+            ((UIMenuListItem)coreMenu.MenuItems[0]).Index = useMph ? 0 : 1;
+            ((UIMenuCheckboxItem)coreMenu.MenuItems[1]).Checked = enableSaving;
+            ((UIMenuCheckboxItem)coreMenu.MenuItems[2]).Checked = onfootSpeedo;
+            ((UIMenuListItem)dispMenu.MenuItems[0]).Index = (int)vAlign;
+            ((UIMenuListItem)dispMenu.MenuItems[1]).Index = (int)hAlign;
+            ((UIMenuListItem)dispMenu.MenuItems[2]).Index = Array.IndexOf(Enum.GetValues(typeof(GTA.Font)), (GTA.Font)fontStyle);
 
-        void UpdateCoreButtons(int selectedIndex)
-        {
-            coreMenuItems[0].Caption = "Speed Unit: " + (useMph ? "Imperial" : "Metric");
-            coreMenuItems[1].Caption = "Save Trip Meter: " + (enableSaving ? "On" : "Off");
-            coreMenuItems[2].Caption = "Onfoot Speed: " + (onfootSpeedo ? "On" : "Off");
-            ChangeMenuSelectedIndex(coreMenu, selectedIndex);
-        }
-
-        void UpdateDispButtons(int selectedIndex)
-        {
-            dispMenuItems[0].Caption = "Vertical: " + System.Enum.GetName(typeof(VerticalAlignment), vAlign);
-            dispMenuItems[1].Caption = "Horizontal: " + System.Enum.GetName(typeof(HorizontalAlign), hAlign);
-            dispMenuItems[2].Caption = "Font Style: " + fontStyle;
-            ChangeMenuSelectedIndex(dispMenu, selectedIndex);
-        }
-
-        void UpdateColorButtons(int selectedIndex)
-        {
             Color color = isChangingBackcolor ? backcolor : forecolor;
-            colorMenu.Caption = (isChangingBackcolor ? "Back Color" : "Fore Color") 
-                + "\nR: " + color.R + " G: " + color.G + " B: " + color.B + " A: " + color.A;
-            ChangeMenuSelectedIndex(colorMenu, selectedIndex);
+            foreach (UIMenuItem item in colorMenu.MenuItems)
+            {
+                item.Description = (isChangingBackcolor ? "Back Color" : "Fore Color") + "\nR: " + color.R + " G: " + color.G + " B: " + color.B + " A: " + color.A;
+            }
+
+            ((UIMenuListItem)extrasMenu.MenuItems[0]).Index = rainbowMode;
         }
 
-        void UpdateExtrasButtons(int selectedIndex)
+        //void UpdateColorButtons()
+        //{
+        //    Color color = isChangingBackcolor ? backcolor : forecolor;
+        //    colorMenu.Caption = (isChangingBackcolor ? "Back Color" : "Fore Color") 
+        //        + "\nR: " + color.R + " G: " + color.G + " B: " + color.B + " A: " + color.A;
+        //}
+        string GetTitle()
         {
-            extrasMenuItems[0].Caption = "Rainbow Mode: " + (rainbowMode == 0 ? "Off" : Math.Pow(2, rainbowMode - 1) + "x");
-            extrasMenuItems[1].Caption = (useMph ? "0-62 mph" : "0-100 kph") + " Timer";
-            ChangeMenuSelectedIndex(extrasMenu, selectedIndex);
-        }
-
-        void ChangeMenuSelectedIndex(GTA.Menu menu, int selectedIndex)
-        {
-            menu.Initialize();
-            for (int i = 0; i < selectedIndex; i++)
-                menu.OnChangeSelection(true);
+            return "Speedometer v" + SCRIPT_VERSION;
         }
 
         void LoadStats()
@@ -557,12 +602,12 @@ namespace GTAVMod_Speedometer
             catch { }
         }
 
-        void ShowCredits(object sender, EventArgs e)
+        void ShowCredits()
         {
             UI.Notify("Speedometer ~r~v" + SCRIPT_VERSION + " ~s~by ~b~libertylocked");
         }
 
-        void CheckForUpdates(object sender, EventArgs e)
+        void CheckForUpdates()
         {
             if (updateCheckState != UpdateCheckState.Stopped) return;
             try
@@ -609,8 +654,10 @@ namespace GTAVMod_Speedometer
                 settings.SetValue("Core", "UseMph", useMph.ToString());
                 settings.SetValue("Core", "DisplayMode", (int)speedoMode);
                 settings.SetValue("Core", "EnableSaving", enableSaving.ToString());
-                settings.SetValue("Core", "OnfootSpeedo", onfootSpeedo.ToString());
                 settings.SetValue("Core", "RainbowMode", rainbowMode);
+                settings.SetValue("Core", "OnfootSpeedo", onfootSpeedo.ToString());
+                settings.SetValue("Text", "KphText", kphText);
+                settings.SetValue("Text", "MphText", mphText);
                 settings.SetValue("UI", "VertAlign", Enum.GetName(typeof(VerticalAlignment), vAlign));
                 settings.SetValue("UI", "HorzAlign", Enum.GetName(typeof(HorizontalAlign), hAlign));
                 settings.SetValue("UI", "OffsetX", posOffset.X);
@@ -634,822 +681,5 @@ namespace GTAVMod_Speedometer
         }
 
         #endregion
-
-        #region Static methods
-
-        public static float MsToKmh(float mPerS)
-        {
-            return mPerS * 3600 / 1000;
-        }
-
-        public static float KmToMiles(float km)
-        {
-            return km * 0.6213711916666667f;
-        }
-
-        public static bool IsPlayerRidingDeer(Ped playerPed)
-        {
-            try
-            {
-                Ped attached = Function.Call<Ped>(Hash.GET_ENTITY_ATTACHED_TO, playerPed);
-                if (attached != null)
-                {
-                    PedHash attachedHash = (PedHash)attached.Model.Hash;
-                    return (attachedHash == PedHash.Deer);
-                }
-                else
-                    return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public static Color IncrementARGB(Color color, int dA, int dR, int dG, int dB)
-        {
-            return Color.FromArgb(Math.Max(Math.Min(color.A + dA, 255), 0), Math.Max(Math.Min(color.R + dR, 255), 0),
-                Math.Max(Math.Min(color.G + dG, 255), 0), Math.Max(Math.Min(color.B + dB, 255), 0));
-        }
-
-        public static Color HSLA2RGBA(double h, double sl, double l, double a)
-        {
-            double v;
-            double r, g, b;
-            r = l;
-            g = l;
-            b = l;
-            v = (l <= 0.5) ? (l * (1.0 + sl)) : (l + sl - l * sl);
-            if (v > 0)
-            {
-                double m;
-                double sv;
-                int sextant;
-                double fract, vsf, mid1, mid2;
-                m = l + l - v;
-                sv = (v - m) / v;
-                h *= 6.0;
-                sextant = (int)h;
-                fract = h - sextant;
-                vsf = v * sv * fract;
-                mid1 = m + vsf;
-                mid2 = v - vsf;
-                switch (sextant)
-                {
-                    case 0:
-                        r = v;
-                        g = mid1;
-                        b = m;
-                        break;
-                    case 1:
-                        r = mid2;
-                        g = v;
-                        b = m;
-                        break;
-                    case 2:
-                        r = m;
-                        g = v;
-                        b = mid1;
-                        break;
-                    case 3:
-                        r = m;
-                        g = mid2;
-                        b = v;
-                        break;
-                    case 4:
-                        r = mid1;
-                        g = m;
-                        b = v;
-                        break;
-                    case 5:
-                        r = v;
-                        g = m;
-                        b = mid2;
-                        break;
-                }
-            }
-            int colorR = Math.Min(Convert.ToInt32(r * 255.0f), 255);
-            int colorG = Math.Min(Convert.ToInt32(g * 255.0f), 255);
-            int colorB = Math.Min(Convert.ToInt32(b * 255.0f), 255);
-            int colorA = Math.Min(Convert.ToInt32(a * 255.0f), 255);
-            return Color.FromArgb(colorA, colorR, colorG, colorB);
-        }
-
-        #endregion
     }
-
-    class MySettingsMenu : GTA.Menu
-    {
-        Metric_Speedometer script;
-
-        public MySettingsMenu(string caption, GTA.IMenuItem[] items, Metric_Speedometer script)
-            : base(caption, items)
-        {
-            this.script = script;
-        }
-
-        public override void OnClose()
-        {
-            script.SaveSettings();
-            base.OnClose();
-        }
-    }
-
-    class AccelerationTimerWidget
-    {
-        public AccelerationTimerState State
-        {
-            get;
-            private set;
-        }
-
-        const int TIME_DISPLAYFINISHED = 6; // seconds
-        UIText timerText;
-        float watchTime;
-        float displayTime = 0;
-
-        public AccelerationTimerWidget()
-        {
-            State = AccelerationTimerState.Off;
-            timerText = new UIText("", new Point(UI.WIDTH / 2, UI.HEIGHT / 2), 0.5f, Color.White, 0, true);
-        }
-
-        public void Update(float speed)
-        {
-            switch (State)
-            {
-                case AccelerationTimerState.Off:
-                    break;
-                case AccelerationTimerState.WaitingForStop:
-                    if (speed == 0)
-                    {
-                        State = AccelerationTimerState.Ready;
-                    }
-                    break;
-                case AccelerationTimerState.Ready:
-                    if (speed != 0)
-                    {
-                        State = AccelerationTimerState.Counting;
-                    }
-                    break;
-                case AccelerationTimerState.Counting:
-                    if (speed >= (float)100000 / 3600) // 100 kph
-                    {
-                        State = AccelerationTimerState.Finished;
-                        timerText.Color = Color.Red;
-                        displayTime = 0;
-                    }
-                    else
-                    {
-                        watchTime += Game.LastFrameTime;
-                    }
-                    break;
-                case AccelerationTimerState.Finished:
-                    displayTime += Game.LastFrameTime;
-                    if (displayTime > TIME_DISPLAYFINISHED)
-                    {
-                        displayTime = 0;
-                        this.Stop();
-                    }
-                    break;
-            }
-        }
-
-        public void Draw()
-        {
-            if (State != AccelerationTimerState.Off)
-            {
-                timerText.Caption = watchTime.ToString("0.000s");
-                if (State == AccelerationTimerState.WaitingForStop) timerText.Caption += "\nPlease stop your vehicle";
-                else if (State == AccelerationTimerState.Ready) timerText.Caption += "\nReady";
-                timerText.Draw();
-            }
-        }
-
-        public void Toggle()
-        {
-            if (State == AccelerationTimerState.Off) Start();
-            else Stop();
-        }
-
-        public void Start()
-        {
-            State = AccelerationTimerState.WaitingForStop;
-            watchTime = 0;
-            timerText.Color = Color.White; // reset color
-        }
-
-        public void Stop()
-        {
-            State = AccelerationTimerState.Off;
-        }
-    }
-
-    class MaxSpeedWidget
-    {
-        float maxSpeed;
-        UIText maxSpeedText;
-
-        public MaxSpeedState State
-        {
-            get;
-            private set;
-        }
-
-        public MaxSpeedWidget()
-        {
-            State = MaxSpeedState.Off;
-            maxSpeedText = new UIText("", new Point(UI.WIDTH / 2, UI.HEIGHT / 2 + 50), 0.5f, Color.White, 0, true);
-            maxSpeed = 0;
-        }
-
-        public void Update(float speed)
-        {
-            if (State == MaxSpeedState.Counting)
-            {
-                if (speed > maxSpeed) maxSpeed = speed;
-            }
-        }
-
-        public void Draw(bool useMph)
-        {
-            if (State == MaxSpeedState.Counting)
-            {
-                float speedKph = Metric_Speedometer.MsToKmh(maxSpeed);
-                maxSpeedText.Caption = "Max: " + (useMph ? Metric_Speedometer.KmToMiles(speedKph).ToString("0.0 mph") : speedKph.ToString("0.0 km/h"));
-                maxSpeedText.Draw();
-            }
-        }
-
-        public void Toggle()
-        {
-            if (State == MaxSpeedState.Off) Start();
-            else Stop();
-        }
-
-        public void Start()
-        {
-            this.maxSpeed = 0;
-            State = MaxSpeedState.Counting;
-        }
-
-        public void Stop()
-        {
-            State = MaxSpeedState.Off;
-        }
-    }
-
-    #region Enums
-
-    enum SpeedoMode
-    {
-        Off = 0,
-        Simple = 1,
-        Detailed = 2,
-    }
-
-    enum UpdateCheckState
-    {
-        Stopped = 0,
-        Checking = 1,
-        Checked = 2,
-    }
-
-    enum AccelerationTimerState
-    {
-        Off = 0, // off
-        WaitingForStop = 1, // veh not stopped
-        Ready = 2, // veh stopped, timer ready
-        Counting = 3, // veh accelerating, timer counting
-        Finished = 4, // veh reached 100kph, timer stops
-    }
-
-    enum MaxSpeedState
-    {
-        Off = 0,
-        Counting = 1,
-    }
-
-    #endregion
-
-    #region INI File class
-
-    internal class INIFile
-    {
-
-        #region "Declarations"
-
-        // *** Lock for thread-safe access to file and local cache ***
-        private object m_Lock = new object();
-
-        // *** File name ***
-        private string m_FileName = null;
-        internal string FileName
-        {
-            get
-            {
-                return m_FileName;
-            }
-        }
-
-        // *** Lazy loading flag ***
-        private bool m_Lazy = false;
-
-        // *** Automatic flushing flag ***
-        private bool m_AutoFlush = false;
-
-        // *** Local cache ***
-        private Dictionary<string, Dictionary<string, string>> m_Sections = new Dictionary<string, Dictionary<string, string>>();
-        private Dictionary<string, Dictionary<string, string>> m_Modified = new Dictionary<string, Dictionary<string, string>>();
-
-        // *** Local cache modified flag ***
-        private bool m_CacheModified = false;
-
-        #endregion
-
-        #region "Methods"
-
-        // *** Constructor ***
-        public INIFile(string FileName)
-        {
-            Initialize(FileName, false, false);
-        }
-
-        public INIFile(string FileName, bool Lazy, bool AutoFlush)
-        {
-            Initialize(FileName, Lazy, AutoFlush);
-        }
-
-        // *** Initialization ***
-        private void Initialize(string FileName, bool Lazy, bool AutoFlush)
-        {
-            m_FileName = FileName;
-            m_Lazy = Lazy;
-            m_AutoFlush = AutoFlush;
-            if (!m_Lazy) Refresh();
-        }
-
-        // *** Parse section name ***
-        private string ParseSectionName(string Line)
-        {
-            if (!Line.StartsWith("[")) return null;
-            if (!Line.EndsWith("]")) return null;
-            if (Line.Length < 3) return null;
-            return Line.Substring(1, Line.Length - 2);
-        }
-
-        // *** Parse key+value pair ***
-        private bool ParseKeyValuePair(string Line, ref string Key, ref string Value)
-        {
-            // *** Check for key+value pair ***
-            int i;
-            if ((i = Line.IndexOf('=')) <= 0) return false;
-
-            int j = Line.Length - i - 1;
-            Key = Line.Substring(0, i).Trim();
-            if (Key.Length <= 0) return false;
-
-            Value = (j > 0) ? (Line.Substring(i + 1, j).Trim()) : ("");
-            return true;
-        }
-
-        // *** Read file contents into local cache ***
-        internal void Refresh()
-        {
-            lock (m_Lock)
-            {
-                StreamReader sr = null;
-                try
-                {
-                    // *** Clear local cache ***
-                    m_Sections.Clear();
-                    m_Modified.Clear();
-
-                    // *** Open the INI file ***
-                    try
-                    {
-                        sr = new StreamReader(m_FileName);
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        return;
-                    }
-
-                    // *** Read up the file content ***
-                    Dictionary<string, string> CurrentSection = null;
-                    string s;
-                    string SectionName;
-                    string Key = null;
-                    string Value = null;
-                    while ((s = sr.ReadLine()) != null)
-                    {
-                        s = s.Trim();
-
-                        // *** Check for section names ***
-                        SectionName = ParseSectionName(s);
-                        if (SectionName != null)
-                        {
-                            // *** Only first occurrence of a section is loaded ***
-                            if (m_Sections.ContainsKey(SectionName))
-                            {
-                                CurrentSection = null;
-                            }
-                            else
-                            {
-                                CurrentSection = new Dictionary<string, string>();
-                                m_Sections.Add(SectionName, CurrentSection);
-                            }
-                        }
-                        else if (CurrentSection != null)
-                        {
-                            // *** Check for key+value pair ***
-                            if (ParseKeyValuePair(s, ref Key, ref Value))
-                            {
-                                // *** Only first occurrence of a key is loaded ***
-                                if (!CurrentSection.ContainsKey(Key))
-                                {
-                                    CurrentSection.Add(Key, Value);
-                                }
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    // *** Cleanup: close file ***
-                    if (sr != null) sr.Close();
-                    sr = null;
-                }
-            }
-        }
-
-        // *** Flush local cache content ***
-        internal void Flush()
-        {
-            lock (m_Lock)
-            {
-                PerformFlush();
-            }
-        }
-
-        private void PerformFlush()
-        {
-            // *** If local cache was not modified, exit ***
-            if (!m_CacheModified) return;
-            m_CacheModified = false;
-
-            // *** Check if original file exists ***
-            bool OriginalFileExists = File.Exists(m_FileName);
-
-            // *** Get temporary file name ***
-            string TmpFileName = Path.ChangeExtension(m_FileName, "$n$");
-
-            // *** Copy content of original file to temporary file, replace modified values ***
-            StreamWriter sw = null;
-
-            // *** Create the temporary file ***
-            sw = new StreamWriter(TmpFileName);
-
-            try
-            {
-                Dictionary<string, string> CurrentSection = null;
-                if (OriginalFileExists)
-                {
-                    StreamReader sr = null;
-                    try
-                    {
-                        // *** Open the original file ***
-                        sr = new StreamReader(m_FileName);
-
-                        // *** Read the file original content, replace changes with local cache values ***
-                        string s;
-                        string SectionName;
-                        string Key = null;
-                        string Value = null;
-                        bool Unmodified;
-                        bool Reading = true;
-                        while (Reading)
-                        {
-                            s = sr.ReadLine();
-                            Reading = (s != null);
-
-                            // *** Check for end of file ***
-                            if (Reading)
-                            {
-                                Unmodified = true;
-                                s = s.Trim();
-                                SectionName = ParseSectionName(s);
-                            }
-                            else
-                            {
-                                Unmodified = false;
-                                SectionName = null;
-                            }
-
-                            // *** Check for section names ***
-                            if ((SectionName != null) || (!Reading))
-                            {
-                                if (CurrentSection != null)
-                                {
-                                    // *** Write all remaining modified values before leaving a section ****
-                                    if (CurrentSection.Count > 0)
-                                    {
-                                        foreach (string fkey in CurrentSection.Keys)
-                                        {
-                                            if (CurrentSection.TryGetValue(fkey, out Value))
-                                            {
-                                                sw.Write(fkey);
-                                                sw.Write('=');
-                                                sw.WriteLine(Value);
-                                            }
-                                        }
-                                        sw.WriteLine();
-                                        CurrentSection.Clear();
-                                    }
-                                }
-
-                                if (Reading)
-                                {
-                                    // *** Check if current section is in local modified cache ***
-                                    if (!m_Modified.TryGetValue(SectionName, out CurrentSection))
-                                    {
-                                        CurrentSection = null;
-                                    }
-                                }
-                            }
-                            else if (CurrentSection != null)
-                            {
-                                // *** Check for key+value pair ***
-                                if (ParseKeyValuePair(s, ref Key, ref Value))
-                                {
-                                    if (CurrentSection.TryGetValue(Key, out Value))
-                                    {
-                                        // *** Write modified value to temporary file ***
-                                        Unmodified = false;
-                                        CurrentSection.Remove(Key);
-
-                                        sw.Write(Key);
-                                        sw.Write('=');
-                                        sw.WriteLine(Value);
-                                    }
-                                }
-                            }
-
-                            // *** Write unmodified lines from the original file ***
-                            if (Unmodified)
-                            {
-                                sw.WriteLine(s);
-                            }
-                        }
-
-                        // *** Close the original file ***
-                        sr.Close();
-                        sr = null;
-                    }
-                    finally
-                    {
-                        // *** Cleanup: close files ***                  
-                        if (sr != null) sr.Close();
-                        sr = null;
-                    }
-                }
-
-                // *** Cycle on all remaining modified values ***
-                foreach (KeyValuePair<string, Dictionary<string, string>> SectionPair in m_Modified)
-                {
-                    CurrentSection = SectionPair.Value;
-                    if (CurrentSection.Count > 0)
-                    {
-                        sw.WriteLine();
-
-                        // *** Write the section name ***
-                        sw.Write('[');
-                        sw.Write(SectionPair.Key);
-                        sw.WriteLine(']');
-
-                        // *** Cycle on all key+value pairs in the section ***
-                        foreach (KeyValuePair<string, string> ValuePair in CurrentSection)
-                        {
-                            // *** Write the key+value pair ***
-                            sw.Write(ValuePair.Key);
-                            sw.Write('=');
-                            sw.WriteLine(ValuePair.Value);
-                        }
-                        CurrentSection.Clear();
-                    }
-                }
-                m_Modified.Clear();
-
-                // *** Close the temporary file ***
-                sw.Close();
-                sw = null;
-
-                // *** Rename the temporary file ***
-                File.Copy(TmpFileName, m_FileName, true);
-
-                // *** Delete the temporary file ***
-                File.Delete(TmpFileName);
-            }
-            finally
-            {
-                // *** Cleanup: close files ***                  
-                if (sw != null) sw.Close();
-                sw = null;
-            }
-        }
-
-        // *** Read a value from local cache ***
-        internal string GetValue(string SectionName, string Key, string DefaultValue)
-        {
-            // *** Lazy loading ***
-            if (m_Lazy)
-            {
-                m_Lazy = false;
-                Refresh();
-            }
-
-            lock (m_Lock)
-            {
-                // *** Check if the section exists ***
-                Dictionary<string, string> Section;
-                if (!m_Sections.TryGetValue(SectionName, out Section)) return DefaultValue;
-
-                // *** Check if the key exists ***
-                string Value;
-                if (!Section.TryGetValue(Key, out Value)) return DefaultValue;
-
-                // *** Return the found value ***
-                return Value;
-            }
-        }
-
-        // *** Insert or modify a value in local cache ***
-        internal void SetValue(string SectionName, string Key, string Value)
-        {
-            // *** Lazy loading ***
-            if (m_Lazy)
-            {
-                m_Lazy = false;
-                Refresh();
-            }
-
-            lock (m_Lock)
-            {
-                // *** Flag local cache modification ***
-                m_CacheModified = true;
-
-                // *** Check if the section exists ***
-                Dictionary<string, string> Section;
-                if (!m_Sections.TryGetValue(SectionName, out Section))
-                {
-                    // *** If it doesn't, add it ***
-                    Section = new Dictionary<string, string>();
-                    m_Sections.Add(SectionName, Section);
-                }
-
-                // *** Modify the value ***
-                if (Section.ContainsKey(Key)) Section.Remove(Key);
-                Section.Add(Key, Value);
-
-                // *** Add the modified value to local modified values cache ***
-                if (!m_Modified.TryGetValue(SectionName, out Section))
-                {
-                    Section = new Dictionary<string, string>();
-                    m_Modified.Add(SectionName, Section);
-                }
-
-                if (Section.ContainsKey(Key)) Section.Remove(Key);
-                Section.Add(Key, Value);
-
-                // *** Automatic flushing : immediately write any modification to the file ***
-                if (m_AutoFlush) PerformFlush();
-            }
-        }
-
-        // *** Encode byte array ***
-        private string EncodeByteArray(byte[] Value)
-        {
-            if (Value == null) return null;
-
-            StringBuilder sb = new StringBuilder();
-            foreach (byte b in Value)
-            {
-                string hex = Convert.ToString(b, 16);
-                int l = hex.Length;
-                if (l > 2)
-                {
-                    sb.Append(hex.Substring(l - 2, 2));
-                }
-                else
-                {
-                    if (l < 2) sb.Append("0");
-                    sb.Append(hex);
-                }
-            }
-            return sb.ToString();
-        }
-
-        // *** Decode byte array ***
-        private byte[] DecodeByteArray(string Value)
-        {
-            if (Value == null) return null;
-
-            int l = Value.Length;
-            if (l < 2) return new byte[] { };
-
-            l /= 2;
-            byte[] Result = new byte[l];
-            for (int i = 0; i < l; i++) Result[i] = Convert.ToByte(Value.Substring(i * 2, 2), 16);
-            return Result;
-        }
-
-        // *** Getters for various types ***
-        internal bool GetValue(string SectionName, string Key, bool DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            bool Value;
-            if (bool.TryParse(StringValue, out Value)) return (Value);
-            return DefaultValue;
-        }
-
-        internal int GetValue(string SectionName, string Key, int DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            int Value;
-            if (int.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        internal long GetValue(string SectionName, string Key, long DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            long Value;
-            if (long.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        internal double GetValue(string SectionName, string Key, double DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            double Value;
-            if (double.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        internal byte[] GetValue(string SectionName, string Key, byte[] DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, EncodeByteArray(DefaultValue));
-            try
-            {
-                return DecodeByteArray(StringValue);
-            }
-            catch (FormatException)
-            {
-                return DefaultValue;
-            }
-        }
-
-        internal DateTime GetValue(string SectionName, string Key, DateTime DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            DateTime Value;
-            if (DateTime.TryParse(StringValue, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.NoCurrentDateDefault | DateTimeStyles.AssumeLocal, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        // *** Setters for various types ***
-        internal void SetValue(string SectionName, string Key, bool Value)
-        {
-            SetValue(SectionName, Key, (Value).ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, int Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, long Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, double Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, byte[] Value)
-        {
-            SetValue(SectionName, Key, EncodeByteArray(Value));
-        }
-
-        internal void SetValue(string SectionName, string Key, DateTime Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        #endregion
-
-    }
-#endregion
 }
