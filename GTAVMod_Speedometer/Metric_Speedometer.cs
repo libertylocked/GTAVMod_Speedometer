@@ -288,6 +288,8 @@ namespace GTAVMod_Speedometer
             fontStyle = 4;
             backcolor = Color.FromArgb(150, 237, 239, 241);
             forecolor = Color.FromArgb(255, 0, 0, 0);
+            kphText = "km/h";
+            mphText = "mph";
             SetupUIElements();
         }
 
@@ -375,11 +377,18 @@ namespace GTAVMod_Speedometer
             UIMenuItem btnForecolor = new UIMenuItem("Fore Color", "Sets the color of the text");
             btnForecolor.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
             btnForecolor.Activated += delegate { isChangingBackcolor = false; UpdateAllMenuButtons(); };
+            UIMenuItem btnTxt = new UIMenuItem("Speed Unit Text", "Changes the text for speed unit");
+            btnTxt.Activated += delegate 
+            {
+                string input = Game.GetUserInput(WindowTitle.CELL_EMASH_BOD, useMph ? mphText : kphText, 20);
+                if (useMph) mphText = input;
+                else kphText = input;
+            };
             UIMenuItem btnRstDefault = new UIMenuItem("Restore to Default", "Resets UI to default settings");
             btnRstDefault.Activated += delegate { ResetUIToDefault(); UpdateAllMenuButtons(); };
 
             dispMenu = new UIMenu(GetTitle(), "Display Settings");
-            foreach (UIMenuItem item in new UIMenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnFontSize, btnPanelSize, btnOffset, btnBackcolor, btnForecolor, btnRstDefault })
+            foreach (UIMenuItem item in new UIMenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnFontSize, btnPanelSize, btnOffset, btnBackcolor, btnForecolor, btnTxt, btnRstDefault })
             {
                 dispMenu.AddItem(item);
             }
@@ -645,8 +654,10 @@ namespace GTAVMod_Speedometer
                 settings.SetValue("Core", "UseMph", useMph.ToString());
                 settings.SetValue("Core", "DisplayMode", (int)speedoMode);
                 settings.SetValue("Core", "EnableSaving", enableSaving.ToString());
-                settings.SetValue("Core", "OnfootSpeedo", onfootSpeedo.ToString());
                 settings.SetValue("Core", "RainbowMode", rainbowMode);
+                settings.SetValue("Core", "OnfootSpeedo", onfootSpeedo.ToString());
+                settings.SetValue("Text", "KphText", kphText);
+                settings.SetValue("Text", "MphText", mphText);
                 settings.SetValue("UI", "VertAlign", Enum.GetName(typeof(VerticalAlignment), vAlign));
                 settings.SetValue("UI", "HorzAlign", Enum.GetName(typeof(HorizontalAlign), hAlign));
                 settings.SetValue("UI", "OffsetX", posOffset.X);
