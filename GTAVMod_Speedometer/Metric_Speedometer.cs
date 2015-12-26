@@ -65,6 +65,7 @@ namespace GTAVMod_Speedometer
         float fontSize;
         int fontStyle;
         Color backcolor, forecolor;
+        string kphText, mphText;
 
         #endregion
 
@@ -179,7 +180,7 @@ namespace GTAVMod_Speedometer
             {
                 float speedMph = KmToMiles(speedKph);
                 float distanceMiles = KmToMiles(distanceKm);
-                speedText.Caption = Math.Floor(speedMph).ToString("0 mph"); // floor speed mph
+                speedText.Caption = Math.Floor(speedMph).ToString("0 " + mphText); // floor speed mph
                 if (speedoMode == SpeedoMode.Detailed)
                 {
                     double truncated = Math.Floor(distanceMiles * 10) / 10.0;
@@ -188,7 +189,7 @@ namespace GTAVMod_Speedometer
             }
             else
             {
-                speedText.Caption = Math.Floor(speedKph).ToString("0 km/h"); // floor speed km/h
+                speedText.Caption = Math.Floor(speedKph).ToString("0 " + kphText); // floor speed km/h
                 if (speedoMode == SpeedoMode.Detailed)
                 {
                     double truncated = Math.Floor(distanceKm * 10) / 10.0;
@@ -232,6 +233,8 @@ namespace GTAVMod_Speedometer
                     settings.GetValue<int>("UI", "BackcolorG", 239), settings.GetValue<int>("UI", "BackcolorB", 241));
                 this.forecolor = Color.FromArgb(settings.GetValue<int>("UI", "ForecolorA", 255), settings.GetValue<int>("UI", "ForecolorR", 0),
                     settings.GetValue<int>("UI", "ForecolorG", 0), settings.GetValue<int>("UI", "ForecolorB", 0));
+                this.kphText = settings.GetValue("Text", "KphText", "km/h");
+                this.mphText = settings.GetValue("Text", "MphText", "mph");
 
                 // Load stats
                 if (enableSaving) LoadStats();
@@ -300,8 +303,8 @@ namespace GTAVMod_Speedometer
             // Create main menu
             MenuButton btnToggle = new MenuButton("");
             btnToggle.Activated += delegate { speedoMode = (SpeedoMode)(((int)speedoMode + 1) % Enum.GetNames(typeof(SpeedoMode)).Length); UpdateMainButtons(0); };
-            MenuButton btnClear = new MenuButton("Reset Odometer");
-            btnClear.Activated += delegate { distanceKm = 0; UI.Notify("Odometer reset"); };
+            MenuButton btnClear = new MenuButton("Reset Trip Meter");
+            btnClear.Activated += delegate { distanceKm = 0; UI.Notify("Trip meter reset"); };
             MenuButton btnCore = new MenuButton("Core Settings >");
             btnCore.Activated += delegate { View.AddMenu(coreMenu); UpdateCoreButtons(0); };
             MenuButton btnDisp = new MenuButton("Display Settings >");
@@ -485,7 +488,7 @@ namespace GTAVMod_Speedometer
         void UpdateCoreButtons(int selectedIndex)
         {
             coreMenuItems[0].Caption = "Speed Unit: " + (useMph ? "Imperial" : "Metric");
-            coreMenuItems[1].Caption = "Save Odometer: " + (enableSaving ? "On" : "Off");
+            coreMenuItems[1].Caption = "Save Trip Meter: " + (enableSaving ? "On" : "Off");
             coreMenuItems[2].Caption = "Onfoot Speed: " + (onfootSpeedo ? "On" : "Off");
             ChangeMenuSelectedIndex(coreMenu, selectedIndex);
         }
