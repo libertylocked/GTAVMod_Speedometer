@@ -111,12 +111,12 @@ namespace GTAVMod_Speedometer
             if (player != null && player.CanControlCharacter && player.IsAlive && player.Character != null)
             {
                 // update and draw
-				if (player.Character.IsInVehicle() || onfootSpeedo || IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
+                if (player.Character.IsInVehicle() || onfootSpeedo || Utils.IsPlayerRidingDeer(player.Character))  // conditions to draw speedo
                 {
                     // in veh or riding deer
                     float speed = 0;
                     if (player.Character.IsInVehicle()) speed = player.Character.CurrentVehicle.Speed;
-					else if (onfootSpeedo || IsPlayerRidingDeer(player.Character)) speed = GetSpeedFromPosChange(player.Character);
+                    else if (onfootSpeedo || Utils.IsPlayerRidingDeer(player.Character)) speed = GetSpeedFromPosChange(player.Character);
 
                     Update(speed);
                     Draw();
@@ -134,7 +134,7 @@ namespace GTAVMod_Speedometer
                         {
                             rainbowTimeCounter = 0;
                             rainbowHueBp = (rainbowHueBp + (int)(1 * Math.Pow(2, rainbowMode - 1) * speed)) % 10000;
-                            speedText.Color = HSLA2RGBA((double)rainbowHueBp / 10000, 1, 0.5, forecolor.A / 255.0);
+                            speedText.Color = Utils.HSLA2RGBA((double)rainbowHueBp / 10000, 1, 0.5, forecolor.A / 255.0);
                         }
                     }
                 }
@@ -172,14 +172,14 @@ namespace GTAVMod_Speedometer
 
         void Update(float speedThisFrame)
         {
-            float speedKph = MsToKmh(speedThisFrame); // convert from m/s to km/h
+            float speedKph = Utils.MsToKmh(speedThisFrame); // convert from m/s to km/h
             float distanceLastFrame = speedThisFrame * Game.LastFrameTime / 1000; // increment odometer counter
             distanceKm += distanceLastFrame;
 
             if (useMph)
             {
-                float speedMph = KmToMiles(speedKph);
-                float distanceMiles = KmToMiles(distanceKm);
+                float speedMph = Utils.KmToMiles(speedKph);
+                float distanceMiles = Utils.KmToMiles(distanceKm);
                 speedText.Caption = Math.Floor(speedMph).ToString("0 " + mphText); // floor speed mph
                 if (speedoMode == SpeedoMode.Detailed)
                 {
@@ -405,57 +405,57 @@ namespace GTAVMod_Speedometer
             MenuButton btnAddR = new MenuButton("+ R");
             btnAddR.Activated += delegate 
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 5, 0, 0);
-                else forecolor = IncrementARGB(forecolor, 0, 5, 0, 0);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 5, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 5, 0, 0);
                 SetupUIElements(); UpdateColorButtons(0);
             };
             MenuButton btnSubR = new MenuButton("- R");
             btnSubR.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, -5, 0, 0);
-                else forecolor = IncrementARGB(forecolor, 0, -5, 0, 0);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, -5, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, -5, 0, 0);
                 SetupUIElements(); UpdateColorButtons(1);
             };
             MenuButton btnAddG = new MenuButton("+ G");
             btnAddG.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 5, 0);
-                else forecolor = IncrementARGB(forecolor, 0, 0, 5, 0);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 5, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 5, 0);
                 SetupUIElements(); UpdateColorButtons(2);
             };
             MenuButton btnSubG = new MenuButton("- G");
             btnSubG.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, -5, 0);
-                else forecolor = IncrementARGB(forecolor, 0, 0, -5, 0);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, -5, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, -5, 0);
                 SetupUIElements(); UpdateColorButtons(3);
             };
             MenuButton btnAddB = new MenuButton("+ B");
             btnAddB.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 0, 5);
-                else forecolor = IncrementARGB(forecolor, 0, 0, 0, 5);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, 5);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, 5);
                 SetupUIElements(); UpdateColorButtons(4);
             };
             MenuButton btnSubB = new MenuButton("- B");
             btnSubB.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 0, 0, 0, -5);
-                else forecolor = IncrementARGB(forecolor, 0, 0, 0, -5);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, -5);
+                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, -5);
                 SetupUIElements(); UpdateColorButtons(5);
             };
             MenuButton btnAddA = new MenuButton("+ Opacity");
             btnAddA.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, 5, 0, 0, 0);
-                else forecolor = IncrementARGB(forecolor, 5, 0, 0, 0);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 5, 0, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, 5, 0, 0, 0);
                 SetupUIElements(); UpdateColorButtons(6);
             };
             MenuButton btnSubA = new MenuButton("- Opacity");
             btnSubA.Activated += delegate
             {
-                if (isChangingBackcolor) backcolor = IncrementARGB(backcolor, -5, 0, 0, 0);
-                else forecolor = IncrementARGB(forecolor, -5, 0, 0, 0);
+                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, -5, 0, 0, 0);
+                else forecolor = Utils.IncrementARGB(forecolor, -5, 0, 0, 0);
                 SetupUIElements(); UpdateColorButtons(7);
             };
             this.colorMenuItems = new GTA.IMenuItem[] { btnAddR, btnSubR, btnAddG, btnSubG, btnAddB, btnSubB, btnAddA, btnSubA };
@@ -634,108 +634,6 @@ namespace GTAVMod_Speedometer
         }
 
         #endregion
-
-        #region Static methods
-
-        public static float MsToKmh(float mPerS)
-        {
-            return mPerS * 3600 / 1000;
-        }
-
-        public static float KmToMiles(float km)
-        {
-            return km * 0.6213711916666667f;
-        }
-
-        public static bool IsPlayerRidingDeer(Ped playerPed)
-        {
-            try
-            {
-                Ped attached = Function.Call<Ped>(Hash.GET_ENTITY_ATTACHED_TO, playerPed);
-                if (attached != null)
-                {
-                    PedHash attachedHash = (PedHash)attached.Model.Hash;
-                    return (attachedHash == PedHash.Deer);
-                }
-                else
-                    return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public static Color IncrementARGB(Color color, int dA, int dR, int dG, int dB)
-        {
-            return Color.FromArgb(Math.Max(Math.Min(color.A + dA, 255), 0), Math.Max(Math.Min(color.R + dR, 255), 0),
-                Math.Max(Math.Min(color.G + dG, 255), 0), Math.Max(Math.Min(color.B + dB, 255), 0));
-        }
-
-        public static Color HSLA2RGBA(double h, double sl, double l, double a)
-        {
-            double v;
-            double r, g, b;
-            r = l;
-            g = l;
-            b = l;
-            v = (l <= 0.5) ? (l * (1.0 + sl)) : (l + sl - l * sl);
-            if (v > 0)
-            {
-                double m;
-                double sv;
-                int sextant;
-                double fract, vsf, mid1, mid2;
-                m = l + l - v;
-                sv = (v - m) / v;
-                h *= 6.0;
-                sextant = (int)h;
-                fract = h - sextant;
-                vsf = v * sv * fract;
-                mid1 = m + vsf;
-                mid2 = v - vsf;
-                switch (sextant)
-                {
-                    case 0:
-                        r = v;
-                        g = mid1;
-                        b = m;
-                        break;
-                    case 1:
-                        r = mid2;
-                        g = v;
-                        b = m;
-                        break;
-                    case 2:
-                        r = m;
-                        g = v;
-                        b = mid1;
-                        break;
-                    case 3:
-                        r = m;
-                        g = mid2;
-                        b = v;
-                        break;
-                    case 4:
-                        r = mid1;
-                        g = m;
-                        b = v;
-                        break;
-                    case 5:
-                        r = v;
-                        g = m;
-                        b = mid2;
-                        break;
-                }
-            }
-            int colorR = Math.Min(Convert.ToInt32(r * 255.0f), 255);
-            int colorG = Math.Min(Convert.ToInt32(g * 255.0f), 255);
-            int colorB = Math.Min(Convert.ToInt32(b * 255.0f), 255);
-            int colorA = Math.Min(Convert.ToInt32(a * 255.0f), 255);
-            return Color.FromArgb(colorA, colorR, colorG, colorB);
-        }
-
-        #endregion
     }
 
     class MySettingsMenu : GTA.Menu
@@ -754,702 +652,4 @@ namespace GTAVMod_Speedometer
             base.OnClose();
         }
     }
-
-    class AccelerationTimerWidget
-    {
-        public AccelerationTimerState State
-        {
-            get;
-            private set;
-        }
-
-        const int TIME_DISPLAYFINISHED = 6; // seconds
-        UIText timerText;
-        float watchTime;
-        float displayTime = 0;
-
-        public AccelerationTimerWidget()
-        {
-            State = AccelerationTimerState.Off;
-            timerText = new UIText("", new Point(UI.WIDTH / 2, UI.HEIGHT / 2), 0.5f, Color.White, 0, true);
-        }
-
-        public void Update(float speed)
-        {
-            switch (State)
-            {
-                case AccelerationTimerState.Off:
-                    break;
-                case AccelerationTimerState.WaitingForStop:
-                    if (speed == 0)
-                    {
-                        State = AccelerationTimerState.Ready;
-                    }
-                    break;
-                case AccelerationTimerState.Ready:
-                    if (speed != 0)
-                    {
-                        State = AccelerationTimerState.Counting;
-                    }
-                    break;
-                case AccelerationTimerState.Counting:
-                    if (speed >= (float)100000 / 3600) // 100 kph
-                    {
-                        State = AccelerationTimerState.Finished;
-                        timerText.Color = Color.Red;
-                        displayTime = 0;
-                    }
-                    else
-                    {
-                        watchTime += Game.LastFrameTime;
-                    }
-                    break;
-                case AccelerationTimerState.Finished:
-                    displayTime += Game.LastFrameTime;
-                    if (displayTime > TIME_DISPLAYFINISHED)
-                    {
-                        displayTime = 0;
-                        this.Stop();
-                    }
-                    break;
-            }
-        }
-
-        public void Draw()
-        {
-            if (State != AccelerationTimerState.Off)
-            {
-                timerText.Caption = watchTime.ToString("0.000s");
-                if (State == AccelerationTimerState.WaitingForStop) timerText.Caption += "\nPlease stop your vehicle";
-                else if (State == AccelerationTimerState.Ready) timerText.Caption += "\nReady";
-                timerText.Draw();
-            }
-        }
-
-        public void Toggle()
-        {
-            if (State == AccelerationTimerState.Off) Start();
-            else Stop();
-        }
-
-        public void Start()
-        {
-            State = AccelerationTimerState.WaitingForStop;
-            watchTime = 0;
-            timerText.Color = Color.White; // reset color
-        }
-
-        public void Stop()
-        {
-            State = AccelerationTimerState.Off;
-        }
-    }
-
-    class MaxSpeedWidget
-    {
-        float maxSpeed;
-        UIText maxSpeedText;
-
-        public MaxSpeedState State
-        {
-            get;
-            private set;
-        }
-
-        public MaxSpeedWidget()
-        {
-            State = MaxSpeedState.Off;
-            maxSpeedText = new UIText("", new Point(UI.WIDTH / 2, UI.HEIGHT / 2 + 50), 0.5f, Color.White, 0, true);
-            maxSpeed = 0;
-        }
-
-        public void Update(float speed)
-        {
-            if (State == MaxSpeedState.Counting)
-            {
-                if (speed > maxSpeed) maxSpeed = speed;
-            }
-        }
-
-        public void Draw(bool useMph)
-        {
-            if (State == MaxSpeedState.Counting)
-            {
-                float speedKph = Metric_Speedometer.MsToKmh(maxSpeed);
-                maxSpeedText.Caption = "Max: " + (useMph ? Metric_Speedometer.KmToMiles(speedKph).ToString("0.0 mph") : speedKph.ToString("0.0 km/h"));
-                maxSpeedText.Draw();
-            }
-        }
-
-        public void Toggle()
-        {
-            if (State == MaxSpeedState.Off) Start();
-            else Stop();
-        }
-
-        public void Start()
-        {
-            this.maxSpeed = 0;
-            State = MaxSpeedState.Counting;
-        }
-
-        public void Stop()
-        {
-            State = MaxSpeedState.Off;
-        }
-    }
-
-    #region Enums
-
-    enum SpeedoMode
-    {
-        Off = 0,
-        Simple = 1,
-        Detailed = 2,
-    }
-
-    enum UpdateCheckState
-    {
-        Stopped = 0,
-        Checking = 1,
-        Checked = 2,
-    }
-
-    enum AccelerationTimerState
-    {
-        Off = 0, // off
-        WaitingForStop = 1, // veh not stopped
-        Ready = 2, // veh stopped, timer ready
-        Counting = 3, // veh accelerating, timer counting
-        Finished = 4, // veh reached 100kph, timer stops
-    }
-
-    enum MaxSpeedState
-    {
-        Off = 0,
-        Counting = 1,
-    }
-
-    #endregion
-
-    #region INI File class
-
-    internal class INIFile
-    {
-
-        #region "Declarations"
-
-        // *** Lock for thread-safe access to file and local cache ***
-        private object m_Lock = new object();
-
-        // *** File name ***
-        private string m_FileName = null;
-        internal string FileName
-        {
-            get
-            {
-                return m_FileName;
-            }
-        }
-
-        // *** Lazy loading flag ***
-        private bool m_Lazy = false;
-
-        // *** Automatic flushing flag ***
-        private bool m_AutoFlush = false;
-
-        // *** Local cache ***
-        private Dictionary<string, Dictionary<string, string>> m_Sections = new Dictionary<string, Dictionary<string, string>>();
-        private Dictionary<string, Dictionary<string, string>> m_Modified = new Dictionary<string, Dictionary<string, string>>();
-
-        // *** Local cache modified flag ***
-        private bool m_CacheModified = false;
-
-        #endregion
-
-        #region "Methods"
-
-        // *** Constructor ***
-        public INIFile(string FileName)
-        {
-            Initialize(FileName, false, false);
-        }
-
-        public INIFile(string FileName, bool Lazy, bool AutoFlush)
-        {
-            Initialize(FileName, Lazy, AutoFlush);
-        }
-
-        // *** Initialization ***
-        private void Initialize(string FileName, bool Lazy, bool AutoFlush)
-        {
-            m_FileName = FileName;
-            m_Lazy = Lazy;
-            m_AutoFlush = AutoFlush;
-            if (!m_Lazy) Refresh();
-        }
-
-        // *** Parse section name ***
-        private string ParseSectionName(string Line)
-        {
-            if (!Line.StartsWith("[")) return null;
-            if (!Line.EndsWith("]")) return null;
-            if (Line.Length < 3) return null;
-            return Line.Substring(1, Line.Length - 2);
-        }
-
-        // *** Parse key+value pair ***
-        private bool ParseKeyValuePair(string Line, ref string Key, ref string Value)
-        {
-            // *** Check for key+value pair ***
-            int i;
-            if ((i = Line.IndexOf('=')) <= 0) return false;
-
-            int j = Line.Length - i - 1;
-            Key = Line.Substring(0, i).Trim();
-            if (Key.Length <= 0) return false;
-
-            Value = (j > 0) ? (Line.Substring(i + 1, j).Trim()) : ("");
-            return true;
-        }
-
-        // *** Read file contents into local cache ***
-        internal void Refresh()
-        {
-            lock (m_Lock)
-            {
-                StreamReader sr = null;
-                try
-                {
-                    // *** Clear local cache ***
-                    m_Sections.Clear();
-                    m_Modified.Clear();
-
-                    // *** Open the INI file ***
-                    try
-                    {
-                        sr = new StreamReader(m_FileName);
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        return;
-                    }
-
-                    // *** Read up the file content ***
-                    Dictionary<string, string> CurrentSection = null;
-                    string s;
-                    string SectionName;
-                    string Key = null;
-                    string Value = null;
-                    while ((s = sr.ReadLine()) != null)
-                    {
-                        s = s.Trim();
-
-                        // *** Check for section names ***
-                        SectionName = ParseSectionName(s);
-                        if (SectionName != null)
-                        {
-                            // *** Only first occurrence of a section is loaded ***
-                            if (m_Sections.ContainsKey(SectionName))
-                            {
-                                CurrentSection = null;
-                            }
-                            else
-                            {
-                                CurrentSection = new Dictionary<string, string>();
-                                m_Sections.Add(SectionName, CurrentSection);
-                            }
-                        }
-                        else if (CurrentSection != null)
-                        {
-                            // *** Check for key+value pair ***
-                            if (ParseKeyValuePair(s, ref Key, ref Value))
-                            {
-                                // *** Only first occurrence of a key is loaded ***
-                                if (!CurrentSection.ContainsKey(Key))
-                                {
-                                    CurrentSection.Add(Key, Value);
-                                }
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    // *** Cleanup: close file ***
-                    if (sr != null) sr.Close();
-                    sr = null;
-                }
-            }
-        }
-
-        // *** Flush local cache content ***
-        internal void Flush()
-        {
-            lock (m_Lock)
-            {
-                PerformFlush();
-            }
-        }
-
-        private void PerformFlush()
-        {
-            // *** If local cache was not modified, exit ***
-            if (!m_CacheModified) return;
-            m_CacheModified = false;
-
-            // *** Check if original file exists ***
-            bool OriginalFileExists = File.Exists(m_FileName);
-
-            // *** Get temporary file name ***
-            string TmpFileName = Path.ChangeExtension(m_FileName, "$n$");
-
-            // *** Copy content of original file to temporary file, replace modified values ***
-            StreamWriter sw = null;
-
-            // *** Create the temporary file ***
-            sw = new StreamWriter(TmpFileName);
-
-            try
-            {
-                Dictionary<string, string> CurrentSection = null;
-                if (OriginalFileExists)
-                {
-                    StreamReader sr = null;
-                    try
-                    {
-                        // *** Open the original file ***
-                        sr = new StreamReader(m_FileName);
-
-                        // *** Read the file original content, replace changes with local cache values ***
-                        string s;
-                        string SectionName;
-                        string Key = null;
-                        string Value = null;
-                        bool Unmodified;
-                        bool Reading = true;
-                        while (Reading)
-                        {
-                            s = sr.ReadLine();
-                            Reading = (s != null);
-
-                            // *** Check for end of file ***
-                            if (Reading)
-                            {
-                                Unmodified = true;
-                                s = s.Trim();
-                                SectionName = ParseSectionName(s);
-                            }
-                            else
-                            {
-                                Unmodified = false;
-                                SectionName = null;
-                            }
-
-                            // *** Check for section names ***
-                            if ((SectionName != null) || (!Reading))
-                            {
-                                if (CurrentSection != null)
-                                {
-                                    // *** Write all remaining modified values before leaving a section ****
-                                    if (CurrentSection.Count > 0)
-                                    {
-                                        foreach (string fkey in CurrentSection.Keys)
-                                        {
-                                            if (CurrentSection.TryGetValue(fkey, out Value))
-                                            {
-                                                sw.Write(fkey);
-                                                sw.Write('=');
-                                                sw.WriteLine(Value);
-                                            }
-                                        }
-                                        sw.WriteLine();
-                                        CurrentSection.Clear();
-                                    }
-                                }
-
-                                if (Reading)
-                                {
-                                    // *** Check if current section is in local modified cache ***
-                                    if (!m_Modified.TryGetValue(SectionName, out CurrentSection))
-                                    {
-                                        CurrentSection = null;
-                                    }
-                                }
-                            }
-                            else if (CurrentSection != null)
-                            {
-                                // *** Check for key+value pair ***
-                                if (ParseKeyValuePair(s, ref Key, ref Value))
-                                {
-                                    if (CurrentSection.TryGetValue(Key, out Value))
-                                    {
-                                        // *** Write modified value to temporary file ***
-                                        Unmodified = false;
-                                        CurrentSection.Remove(Key);
-
-                                        sw.Write(Key);
-                                        sw.Write('=');
-                                        sw.WriteLine(Value);
-                                    }
-                                }
-                            }
-
-                            // *** Write unmodified lines from the original file ***
-                            if (Unmodified)
-                            {
-                                sw.WriteLine(s);
-                            }
-                        }
-
-                        // *** Close the original file ***
-                        sr.Close();
-                        sr = null;
-                    }
-                    finally
-                    {
-                        // *** Cleanup: close files ***                  
-                        if (sr != null) sr.Close();
-                        sr = null;
-                    }
-                }
-
-                // *** Cycle on all remaining modified values ***
-                foreach (KeyValuePair<string, Dictionary<string, string>> SectionPair in m_Modified)
-                {
-                    CurrentSection = SectionPair.Value;
-                    if (CurrentSection.Count > 0)
-                    {
-                        sw.WriteLine();
-
-                        // *** Write the section name ***
-                        sw.Write('[');
-                        sw.Write(SectionPair.Key);
-                        sw.WriteLine(']');
-
-                        // *** Cycle on all key+value pairs in the section ***
-                        foreach (KeyValuePair<string, string> ValuePair in CurrentSection)
-                        {
-                            // *** Write the key+value pair ***
-                            sw.Write(ValuePair.Key);
-                            sw.Write('=');
-                            sw.WriteLine(ValuePair.Value);
-                        }
-                        CurrentSection.Clear();
-                    }
-                }
-                m_Modified.Clear();
-
-                // *** Close the temporary file ***
-                sw.Close();
-                sw = null;
-
-                // *** Rename the temporary file ***
-                File.Copy(TmpFileName, m_FileName, true);
-
-                // *** Delete the temporary file ***
-                File.Delete(TmpFileName);
-            }
-            finally
-            {
-                // *** Cleanup: close files ***                  
-                if (sw != null) sw.Close();
-                sw = null;
-            }
-        }
-
-        // *** Read a value from local cache ***
-        internal string GetValue(string SectionName, string Key, string DefaultValue)
-        {
-            // *** Lazy loading ***
-            if (m_Lazy)
-            {
-                m_Lazy = false;
-                Refresh();
-            }
-
-            lock (m_Lock)
-            {
-                // *** Check if the section exists ***
-                Dictionary<string, string> Section;
-                if (!m_Sections.TryGetValue(SectionName, out Section)) return DefaultValue;
-
-                // *** Check if the key exists ***
-                string Value;
-                if (!Section.TryGetValue(Key, out Value)) return DefaultValue;
-
-                // *** Return the found value ***
-                return Value;
-            }
-        }
-
-        // *** Insert or modify a value in local cache ***
-        internal void SetValue(string SectionName, string Key, string Value)
-        {
-            // *** Lazy loading ***
-            if (m_Lazy)
-            {
-                m_Lazy = false;
-                Refresh();
-            }
-
-            lock (m_Lock)
-            {
-                // *** Flag local cache modification ***
-                m_CacheModified = true;
-
-                // *** Check if the section exists ***
-                Dictionary<string, string> Section;
-                if (!m_Sections.TryGetValue(SectionName, out Section))
-                {
-                    // *** If it doesn't, add it ***
-                    Section = new Dictionary<string, string>();
-                    m_Sections.Add(SectionName, Section);
-                }
-
-                // *** Modify the value ***
-                if (Section.ContainsKey(Key)) Section.Remove(Key);
-                Section.Add(Key, Value);
-
-                // *** Add the modified value to local modified values cache ***
-                if (!m_Modified.TryGetValue(SectionName, out Section))
-                {
-                    Section = new Dictionary<string, string>();
-                    m_Modified.Add(SectionName, Section);
-                }
-
-                if (Section.ContainsKey(Key)) Section.Remove(Key);
-                Section.Add(Key, Value);
-
-                // *** Automatic flushing : immediately write any modification to the file ***
-                if (m_AutoFlush) PerformFlush();
-            }
-        }
-
-        // *** Encode byte array ***
-        private string EncodeByteArray(byte[] Value)
-        {
-            if (Value == null) return null;
-
-            StringBuilder sb = new StringBuilder();
-            foreach (byte b in Value)
-            {
-                string hex = Convert.ToString(b, 16);
-                int l = hex.Length;
-                if (l > 2)
-                {
-                    sb.Append(hex.Substring(l - 2, 2));
-                }
-                else
-                {
-                    if (l < 2) sb.Append("0");
-                    sb.Append(hex);
-                }
-            }
-            return sb.ToString();
-        }
-
-        // *** Decode byte array ***
-        private byte[] DecodeByteArray(string Value)
-        {
-            if (Value == null) return null;
-
-            int l = Value.Length;
-            if (l < 2) return new byte[] { };
-
-            l /= 2;
-            byte[] Result = new byte[l];
-            for (int i = 0; i < l; i++) Result[i] = Convert.ToByte(Value.Substring(i * 2, 2), 16);
-            return Result;
-        }
-
-        // *** Getters for various types ***
-        internal bool GetValue(string SectionName, string Key, bool DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            bool Value;
-            if (bool.TryParse(StringValue, out Value)) return (Value);
-            return DefaultValue;
-        }
-
-        internal int GetValue(string SectionName, string Key, int DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            int Value;
-            if (int.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        internal long GetValue(string SectionName, string Key, long DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            long Value;
-            if (long.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        internal double GetValue(string SectionName, string Key, double DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            double Value;
-            if (double.TryParse(StringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        internal byte[] GetValue(string SectionName, string Key, byte[] DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, EncodeByteArray(DefaultValue));
-            try
-            {
-                return DecodeByteArray(StringValue);
-            }
-            catch (FormatException)
-            {
-                return DefaultValue;
-            }
-        }
-
-        internal DateTime GetValue(string SectionName, string Key, DateTime DefaultValue)
-        {
-            string StringValue = GetValue(SectionName, Key, DefaultValue.ToString(CultureInfo.InvariantCulture));
-            DateTime Value;
-            if (DateTime.TryParse(StringValue, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.NoCurrentDateDefault | DateTimeStyles.AssumeLocal, out Value)) return Value;
-            return DefaultValue;
-        }
-
-        // *** Setters for various types ***
-        internal void SetValue(string SectionName, string Key, bool Value)
-        {
-            SetValue(SectionName, Key, (Value).ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, int Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, long Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, double Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        internal void SetValue(string SectionName, string Key, byte[] Value)
-        {
-            SetValue(SectionName, Key, EncodeByteArray(Value));
-        }
-
-        internal void SetValue(string SectionName, string Key, DateTime Value)
-        {
-            SetValue(SectionName, Key, Value.ToString(CultureInfo.InvariantCulture));
-        }
-
-        #endregion
-
-    }
-#endregion
 }

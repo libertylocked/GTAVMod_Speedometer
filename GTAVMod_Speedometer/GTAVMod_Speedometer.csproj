@@ -33,6 +33,9 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NativeUI">
+      <HintPath>..\NativeUI.dll</HintPath>
+    </Reference>
     <Reference Include="ScriptHookVDotNet">
       <HintPath>..\ScriptHookVDotNet\ScriptHookVDotNet.dll</HintPath>
     </Reference>
@@ -48,11 +51,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AccelerationTimerState.cs" />
+    <Compile Include="AccelerationTimerWidget.cs" />
+    <Compile Include="INIFile.cs" />
+    <Compile Include="MaxSpeedState.cs" />
+    <Compile Include="MaxSpeedWidget.cs" />
     <Compile Include="Metric_Speedometer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SizeMenuMode.cs" />
+    <Compile Include="SpeedoMode.cs" />
+    <Compile Include="UpdateCheckState.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Metric_Speedometer.ini" />
+    <None Include="Metric_Speedometer.ini">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="version.txt" />
