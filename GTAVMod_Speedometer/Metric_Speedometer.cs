@@ -17,6 +17,7 @@ using System.Windows.Forms.VisualStyles;
 using GTA;
 using GTA.Math;
 using GTA.Native;
+using NativeUI;
 
 namespace GTAVMod_Speedometer
 {
@@ -52,9 +53,8 @@ namespace GTAVMod_Speedometer
 		bool onfootSpeedo;
 
         // Fields for menus
-        MySettingsMenu mainMenu;
-        GTA.Menu coreMenu, dispMenu, colorMenu, extrasMenu;
-        GTA.IMenuItem[] mainMenuItems, coreMenuItems, dispMenuItems, colorMenuItems, extrasMenuItems;
+        MenuPool menuPool;
+        UIMenu coreMenu, dispMenu, colorMenu, extrasMenu, mainMenu;
         bool isChangingBackcolor;
 
         // Fields for UI settings
@@ -75,14 +75,6 @@ namespace GTAVMod_Speedometer
             SetupUIElements();
             SetupMenus();
 
-            UpKey = Keys.NumPad8;
-            DownKey = Keys.NumPad2;
-            LeftKey = Keys.NumPad4;
-            RightKey = Keys.NumPad6;
-            ActivateKey = Keys.NumPad5;
-            BackKey = Keys.NumPad0;
-
-            this.View.MenuTransitions = false; // because transition looksnice/doesnotlooknice
             this.Tick += OnTick;
             this.KeyDown += OnKeyDown;
 
@@ -94,6 +86,8 @@ namespace GTAVMod_Speedometer
 
         void OnTick(object sender, EventArgs e)
         {
+            menuPool.ProcessMenus();
+
             if (enableSaving)
             {
                 bool isPausePressed = Function.Call<bool>(Hash.IS_DISABLED_CONTROL_JUST_PRESSED, 2, 199) ||
@@ -154,9 +148,8 @@ namespace GTAVMod_Speedometer
         {
             if (enableMenu && e.KeyCode == menuKey)
             {
-                this.View.CloseAllMenus();
-                this.View.AddMenu(mainMenu);
-                UpdateMainButtons(0);
+                mainMenu.Visible = true;
+                UpdateAllMenuButtons();
                 
                 if (!creditsShown)
                 {
@@ -301,226 +294,238 @@ namespace GTAVMod_Speedometer
         void SetupMenus()
         {
             // Create main menu
-            MenuButton btnToggle = new MenuButton("");
-            btnToggle.Activated += delegate { speedoMode = (SpeedoMode)(((int)speedoMode + 1) % Enum.GetNames(typeof(SpeedoMode)).Length); UpdateMainButtons(0); };
-            MenuButton btnClear = new MenuButton("Reset Trip Meter");
+            UIMenuListItem btnToggle = new UIMenuListItem("Toggle Display", new List<dynamic>(Enum.GetNames(typeof(SpeedoMode))), 0);
+            btnToggle.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index) {
+                speedoMode = (SpeedoMode)(((int)index) % Enum.GetNames(typeof(SpeedoMode)).Length);
+            });
+            UIMenuItem btnClear = new UIMenuItem("Reset Trip Meter");
             btnClear.Activated += delegate { distanceKm = 0; UI.Notify("Trip meter reset"); };
-            MenuButton btnCore = new MenuButton("Core Settings >");
-            btnCore.Activated += delegate { View.AddMenu(coreMenu); UpdateCoreButtons(0); };
-            MenuButton btnDisp = new MenuButton("Display Settings >");
-            btnDisp.Activated += delegate { View.AddMenu(dispMenu); UpdateDispButtons(0); };
-            MenuButton btnExtras = new MenuButton("Extras >");
-            btnExtras.Activated += delegate { View.AddMenu(extrasMenu); UpdateExtrasButtons(0); };
-            MenuButton btnReload = new MenuButton("Reload");
+            UIMenuItem btnCore = new UIMenuItem("Core Settings");
+            btnCore.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnDisp = new UIMenuItem("Display Settings");
+            btnDisp.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnExtras = new UIMenuItem("Extras");
+            btnExtras.SetLeftBadge(UIMenuItem.BadgeStyle.Star);
+            UIMenuItem btnReload = new UIMenuItem("Reload");
             btnReload.Activated += delegate
             {
                 ParseSettings(); SetupUIElements();
-                UpdateMainButtons(5);
+                UpdateAllMenuButtons();
                 UI.Notify("Speedometer reloaded");
             };
-            MenuButton btnBack = new MenuButton("Save & Exit");
-            btnBack.Activated += delegate { View.CloseAllMenus(); };
-            this.mainMenuItems = new GTA.IMenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack };
-            this.mainMenu = new MySettingsMenu("Speedometer v" + SCRIPT_VERSION, mainMenuItems, this);
-            this.mainMenu.HasFooter = false;
+            UIMenuItem btnBack = new UIMenuItem("Save & Close");
+            btnBack.Activated += delegate { SaveSettings(); mainMenu.Visible = false; };
+
+            this.mainMenu = new UIMenu(GetTitle(), "by libertylocked");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack })
+            {
+                this.mainMenu.AddItem(item);
+            }
+            this.mainMenu.OnMenuClose += delegate { SaveSettings(); };
 
             // Create core menu
-            MenuButton btnUseMph = new MenuButton("");
-            btnUseMph.Activated += delegate { useMph = !useMph; UpdateCoreButtons(0); UpdateExtrasButtons(0); };
-            MenuButton btnEnableSaving = new MenuButton("");
-            btnEnableSaving.Activated += delegate { enableSaving = !enableSaving; UpdateCoreButtons(1); };
-            MenuButton btnOnfootSpeedo = new MenuButton("");
-            btnOnfootSpeedo.Activated += delegate { onfootSpeedo = !onfootSpeedo; UpdateCoreButtons(2); };
-            this.coreMenuItems = new GTA.IMenuItem[] { btnUseMph, btnEnableSaving, btnOnfootSpeedo };
-            this.coreMenu = new GTA.Menu("Core Settings", coreMenuItems);
-            this.coreMenu.HasFooter = false;
+            UIMenuListItem btnUseMph = new UIMenuListItem("Speed Unit", new List<dynamic> { "Imperial", "Metric" }, 0);
+            btnUseMph.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            {
+                useMph = index % 2 == 0; UpdateAllMenuButtons();;
+            });
+            UIMenuCheckboxItem btnEnableSaving = new UIMenuCheckboxItem("Save Trip Meter", false);
+            btnEnableSaving.CheckboxEvent += new ItemCheckboxEvent(delegate(UIMenuCheckboxItem item, bool selected)
+            {
+                enableSaving = selected;
+            });
+            UIMenuCheckboxItem btnOnfootSpeedo = new UIMenuCheckboxItem("Onfoot Speed", false);
+            btnOnfootSpeedo.CheckboxEvent += new ItemCheckboxEvent(delegate(UIMenuCheckboxItem item, bool selected)
+            {
+                onfootSpeedo = selected;
+            });
 
-            // Create display menu
-            MenuButton btnVAlign = new MenuButton("");
-            btnVAlign.Activated += delegate { vAlign = (VerticalAlignment)(((int)vAlign + 1) % 3); posOffset.Y = 0; SetupUIElements(); UpdateDispButtons(0); };
-            MenuButton btnHAlign = new MenuButton("");
-            btnHAlign.Activated += delegate { hAlign = (HorizontalAlign)(((int)hAlign + 1) % 3); posOffset.X = 0; SetupUIElements(); UpdateDispButtons(1); };
-            MenuButton btnFontStyle = new MenuButton("");
-            btnFontStyle.Activated += delegate
+            this.coreMenu = new UIMenu(GetTitle(), "Core Settings");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnUseMph, btnEnableSaving, btnOnfootSpeedo })
             {
-                GTA.Font[] fonts = (GTA.Font[])Enum.GetValues(typeof(GTA.Font));
-                int currIndex = Array.IndexOf(fonts, (GTA.Font)fontStyle);
-                int nextIndex = (int)fonts[(currIndex + 1) % fonts.Length];
-                fontStyle = nextIndex; SetupUIElements(); UpdateDispButtons(2);
-            };
-            MenuButton btnFontSize = new MenuButton("Font Size >");
-            btnFontSize.Activated += delegate
-            {
-                MenuButton btnAddSize = new MenuButton("+ Font Size");
-                btnAddSize.Activated += delegate { fontSize += 0.02f; SetupUIElements(); };
-                MenuButton btnSubSize = new MenuButton("- Font Size");
-                btnSubSize.Activated += delegate { fontSize -= 0.02f; SetupUIElements(); };
-                GTA.Menu sizeMenu = new GTA.Menu("Font Size", new GTA.IMenuItem[] { btnAddSize, btnSubSize });
-                sizeMenu.HasFooter = false;
-                View.AddMenu(sizeMenu);
-            };
-            MenuButton btnPanelSize = new MenuButton("Panel Size >");
-            btnPanelSize.Activated += delegate
-            {
-                MenuButton btnAddWidth = new MenuButton("+ Panel Width");
-                btnAddWidth.Activated += delegate { pWidth += 2; SetupUIElements(); };
-                MenuButton btnSubWidth = new MenuButton("- Panel Width");
-                btnSubWidth.Activated += delegate { pWidth -= 2; SetupUIElements(); };
-                MenuButton btnAddHeight = new MenuButton("+ Panel Height");
-                btnAddHeight.Activated += delegate { pHeight += 2; SetupUIElements(); };
-                MenuButton btnSubHeight = new MenuButton("- Panel Height");
-                btnSubHeight.Activated += delegate { pHeight -= 2; SetupUIElements(); };
-                GTA.Menu panelSizeMenu = new GTA.Menu("Panel Size", new GTA.IMenuItem[] { btnAddWidth, btnSubWidth, btnAddHeight, btnSubHeight });
-                panelSizeMenu.HasFooter = false;
-                View.AddMenu(panelSizeMenu);
-            };
-            MenuButton btnAplyOffset = new MenuButton("Set Offset >");
-            btnAplyOffset.Activated += delegate
-            {
-                MenuButton btnOffsetUp = new MenuButton("Move Up");
-                btnOffsetUp.Activated += delegate { posOffset.Y += -2; SetupUIElements(); };
-                MenuButton btnOffsetDown = new MenuButton("Move Down");
-                btnOffsetDown.Activated += delegate { posOffset.Y += 2; SetupUIElements(); };
-                MenuButton btnOffsetLeft = new MenuButton("Move Left");
-                btnOffsetLeft.Activated += delegate { posOffset.X += -2; SetupUIElements(); };
-                MenuButton btnOffsetRight = new MenuButton("Move Right");
-                btnOffsetRight.Activated += delegate { posOffset.X += 2; SetupUIElements(); };
-                MenuButton btnOffsetClr = new MenuButton("Clear Offset");
-                btnOffsetClr.Activated += delegate { posOffset.X = 0; posOffset.Y = 0; SetupUIElements(); };
-                GTA.Menu offsetMenu = new GTA.Menu("Set Offset", new GTA.IMenuItem[] { btnOffsetUp, btnOffsetDown, btnOffsetLeft, btnOffsetRight, btnOffsetClr });
-                offsetMenu.HasFooter = false;
-                View.AddMenu(offsetMenu);
-            };
-            MenuButton btnBackcolor = new MenuButton("Back Color >");
-            btnBackcolor.Activated += delegate { isChangingBackcolor = true; View.AddMenu(colorMenu); UpdateColorButtons(0); };
-            MenuButton btnForecolor = new MenuButton("Fore Color >");
-            btnForecolor.Activated += delegate { isChangingBackcolor = false; View.AddMenu(colorMenu); UpdateColorButtons(0); };
-            MenuButton btnRstDefault = new MenuButton("Restore to Default");
-            btnRstDefault.Activated += delegate { ResetUIToDefault(); UpdateDispButtons(8); };
-            this.dispMenuItems = new GTA.IMenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
-            this.dispMenu = new GTA.Menu("Display Settings", dispMenuItems);
-            this.dispMenu.HasFooter = false;
+                coreMenu.AddItem(item);
+            }
+            mainMenu.BindMenuToItem(coreMenu, btnCore);
 
-            // Create color menu
-            MenuButton btnAddR = new MenuButton("+ R");
-            btnAddR.Activated += delegate 
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 5, 0, 0);
-                else forecolor = Utils.IncrementARGB(forecolor, 0, 5, 0, 0);
-                SetupUIElements(); UpdateColorButtons(0);
-            };
-            MenuButton btnSubR = new MenuButton("- R");
-            btnSubR.Activated += delegate
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, -5, 0, 0);
-                else forecolor = Utils.IncrementARGB(forecolor, 0, -5, 0, 0);
-                SetupUIElements(); UpdateColorButtons(1);
-            };
-            MenuButton btnAddG = new MenuButton("+ G");
-            btnAddG.Activated += delegate
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 5, 0);
-                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 5, 0);
-                SetupUIElements(); UpdateColorButtons(2);
-            };
-            MenuButton btnSubG = new MenuButton("- G");
-            btnSubG.Activated += delegate
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, -5, 0);
-                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, -5, 0);
-                SetupUIElements(); UpdateColorButtons(3);
-            };
-            MenuButton btnAddB = new MenuButton("+ B");
-            btnAddB.Activated += delegate
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, 5);
-                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, 5);
-                SetupUIElements(); UpdateColorButtons(4);
-            };
-            MenuButton btnSubB = new MenuButton("- B");
-            btnSubB.Activated += delegate
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, -5);
-                else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, -5);
-                SetupUIElements(); UpdateColorButtons(5);
-            };
-            MenuButton btnAddA = new MenuButton("+ Opacity");
-            btnAddA.Activated += delegate
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 5, 0, 0, 0);
-                else forecolor = Utils.IncrementARGB(forecolor, 5, 0, 0, 0);
-                SetupUIElements(); UpdateColorButtons(6);
-            };
-            MenuButton btnSubA = new MenuButton("- Opacity");
-            btnSubA.Activated += delegate
-            {
-                if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, -5, 0, 0, 0);
-                else forecolor = Utils.IncrementARGB(forecolor, -5, 0, 0, 0);
-                SetupUIElements(); UpdateColorButtons(7);
-            };
-            this.colorMenuItems = new GTA.IMenuItem[] { btnAddR, btnSubR, btnAddG, btnSubG, btnAddB, btnSubB, btnAddA, btnSubA };
-            this.colorMenu = new GTA.Menu("", colorMenuItems);
-            this.colorMenu.HasFooter = false;
-            this.colorMenu.HeaderHeight += 20;
+            //// Create display menu
+            //MenuButton btnVAlign = new MenuButton("");
+            //btnVAlign.Activated += delegate { vAlign = (VerticalAlignment)(((int)vAlign + 1) % 3); posOffset.Y = 0; SetupUIElements(); UpdateDispButtons(0); };
+            //MenuButton btnHAlign = new MenuButton("");
+            //btnHAlign.Activated += delegate { hAlign = (HorizontalAlign)(((int)hAlign + 1) % 3); posOffset.X = 0; SetupUIElements(); UpdateDispButtons(1); };
+            //MenuButton btnFontStyle = new MenuButton("");
+            //btnFontStyle.Activated += delegate
+            //{
+            //    GTA.Font[] fonts = (GTA.Font[])Enum.GetValues(typeof(GTA.Font));
+            //    int currIndex = Array.IndexOf(fonts, (GTA.Font)fontStyle);
+            //    int nextIndex = (int)fonts[(currIndex + 1) % fonts.Length];
+            //    fontStyle = nextIndex; SetupUIElements(); UpdateDispButtons(2);
+            //};
+            //MenuButton btnFontSize = new MenuButton("Font Size >");
+            //btnFontSize.Activated += delegate
+            //{
+            //    MenuButton btnAddSize = new MenuButton("+ Font Size");
+            //    btnAddSize.Activated += delegate { fontSize += 0.02f; SetupUIElements(); };
+            //    MenuButton btnSubSize = new MenuButton("- Font Size");
+            //    btnSubSize.Activated += delegate { fontSize -= 0.02f; SetupUIElements(); };
+            //    GTA.Menu sizeMenu = new GTA.Menu("Font Size", new GTA.IMenuItem[] { btnAddSize, btnSubSize });
+            //    sizeMenu.HasFooter = false;
+            //    View.AddMenu(sizeMenu);
+            //};
+            //MenuButton btnPanelSize = new MenuButton("Panel Size >");
+            //btnPanelSize.Activated += delegate
+            //{
+            //    MenuButton btnAddWidth = new MenuButton("+ Panel Width");
+            //    btnAddWidth.Activated += delegate { pWidth += 2; SetupUIElements(); };
+            //    MenuButton btnSubWidth = new MenuButton("- Panel Width");
+            //    btnSubWidth.Activated += delegate { pWidth -= 2; SetupUIElements(); };
+            //    MenuButton btnAddHeight = new MenuButton("+ Panel Height");
+            //    btnAddHeight.Activated += delegate { pHeight += 2; SetupUIElements(); };
+            //    MenuButton btnSubHeight = new MenuButton("- Panel Height");
+            //    btnSubHeight.Activated += delegate { pHeight -= 2; SetupUIElements(); };
+            //    GTA.Menu panelSizeMenu = new GTA.Menu("Panel Size", new GTA.IMenuItem[] { btnAddWidth, btnSubWidth, btnAddHeight, btnSubHeight });
+            //    panelSizeMenu.HasFooter = false;
+            //    View.AddMenu(panelSizeMenu);
+            //};
+            //MenuButton btnAplyOffset = new MenuButton("Set Offset >");
+            //btnAplyOffset.Activated += delegate
+            //{
+            //    MenuButton btnOffsetUp = new MenuButton("Move Up");
+            //    btnOffsetUp.Activated += delegate { posOffset.Y += -2; SetupUIElements(); };
+            //    MenuButton btnOffsetDown = new MenuButton("Move Down");
+            //    btnOffsetDown.Activated += delegate { posOffset.Y += 2; SetupUIElements(); };
+            //    MenuButton btnOffsetLeft = new MenuButton("Move Left");
+            //    btnOffsetLeft.Activated += delegate { posOffset.X += -2; SetupUIElements(); };
+            //    MenuButton btnOffsetRight = new MenuButton("Move Right");
+            //    btnOffsetRight.Activated += delegate { posOffset.X += 2; SetupUIElements(); };
+            //    MenuButton btnOffsetClr = new MenuButton("Clear Offset");
+            //    btnOffsetClr.Activated += delegate { posOffset.X = 0; posOffset.Y = 0; SetupUIElements(); };
+            //    GTA.Menu offsetMenu = new GTA.Menu("Set Offset", new GTA.IMenuItem[] { btnOffsetUp, btnOffsetDown, btnOffsetLeft, btnOffsetRight, btnOffsetClr });
+            //    offsetMenu.HasFooter = false;
+            //    View.AddMenu(offsetMenu);
+            //};
+            //MenuButton btnBackcolor = new MenuButton("Back Color >");
+            //btnBackcolor.Activated += delegate { isChangingBackcolor = true; View.AddMenu(colorMenu); UpdateColorButtons(0); };
+            //MenuButton btnForecolor = new MenuButton("Fore Color >");
+            //btnForecolor.Activated += delegate { isChangingBackcolor = false; View.AddMenu(colorMenu); UpdateColorButtons(0); };
+            //MenuButton btnRstDefault = new MenuButton("Restore to Default");
+            //btnRstDefault.Activated += delegate { ResetUIToDefault(); UpdateDispButtons(8); };
+            //this.dispMenuItems = new GTA.IMenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
+            //this.dispMenu = new GTA.Menu("Display Settings", dispMenuItems);
+            //this.dispMenu.HasFooter = false;
 
-            // Create extras menu
-            MenuButton btnRainbowMode = new MenuButton("");
-            btnRainbowMode.Activated += delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); };
-            MenuButton btnAccTimer = new MenuButton("0-100kph Timer");
-            btnAccTimer.Activated += delegate { wid_accTimer.Toggle(); };
-            MenuButton btnMaxSpeed = new MenuButton("Top Speed Recorder");
-            btnMaxSpeed.Activated += delegate { wid_maxSpeed.Toggle(); };
-            MenuButton btnShowCredits = new MenuButton("Show Credits");
-            btnShowCredits.Activated += ShowCredits;
-            MenuButton btnUpdates = new MenuButton("Check for Updates");
-            btnUpdates.Activated += CheckForUpdates;
-            this.extrasMenuItems = new GTA.IMenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates };
-            this.extrasMenu = new GTA.Menu("Extras", extrasMenuItems);
-            this.extrasMenu.HasFooter = false;
+            //// Create color menu
+            //MenuButton btnAddR = new MenuButton("+ R");
+            //btnAddR.Activated += delegate 
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 5, 0, 0);
+            //    else forecolor = Utils.IncrementARGB(forecolor, 0, 5, 0, 0);
+            //    SetupUIElements(); UpdateColorButtons(0);
+            //};
+            //MenuButton btnSubR = new MenuButton("- R");
+            //btnSubR.Activated += delegate
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, -5, 0, 0);
+            //    else forecolor = Utils.IncrementARGB(forecolor, 0, -5, 0, 0);
+            //    SetupUIElements(); UpdateColorButtons(1);
+            //};
+            //MenuButton btnAddG = new MenuButton("+ G");
+            //btnAddG.Activated += delegate
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 5, 0);
+            //    else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 5, 0);
+            //    SetupUIElements(); UpdateColorButtons(2);
+            //};
+            //MenuButton btnSubG = new MenuButton("- G");
+            //btnSubG.Activated += delegate
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, -5, 0);
+            //    else forecolor = Utils.IncrementARGB(forecolor, 0, 0, -5, 0);
+            //    SetupUIElements(); UpdateColorButtons(3);
+            //};
+            //MenuButton btnAddB = new MenuButton("+ B");
+            //btnAddB.Activated += delegate
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, 5);
+            //    else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, 5);
+            //    SetupUIElements(); UpdateColorButtons(4);
+            //};
+            //MenuButton btnSubB = new MenuButton("- B");
+            //btnSubB.Activated += delegate
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 0, 0, 0, -5);
+            //    else forecolor = Utils.IncrementARGB(forecolor, 0, 0, 0, -5);
+            //    SetupUIElements(); UpdateColorButtons(5);
+            //};
+            //MenuButton btnAddA = new MenuButton("+ Opacity");
+            //btnAddA.Activated += delegate
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, 5, 0, 0, 0);
+            //    else forecolor = Utils.IncrementARGB(forecolor, 5, 0, 0, 0);
+            //    SetupUIElements(); UpdateColorButtons(6);
+            //};
+            //MenuButton btnSubA = new MenuButton("- Opacity");
+            //btnSubA.Activated += delegate
+            //{
+            //    if (isChangingBackcolor) backcolor = Utils.IncrementARGB(backcolor, -5, 0, 0, 0);
+            //    else forecolor = Utils.IncrementARGB(forecolor, -5, 0, 0, 0);
+            //    SetupUIElements(); UpdateColorButtons(7);
+            //};
+            //this.colorMenuItems = new GTA.IMenuItem[] { btnAddR, btnSubR, btnAddG, btnSubG, btnAddB, btnSubB, btnAddA, btnSubA };
+            //this.colorMenu = new GTA.Menu("", colorMenuItems);
+            //this.colorMenu.HasFooter = false;
+            //this.colorMenu.HeaderHeight += 20;
+
+            //// Create extras menu
+            //MenuButton btnRainbowMode = new MenuButton("");
+            //btnRainbowMode.Activated += delegate { rainbowMode = (rainbowMode + 1) % 8; if (rainbowMode == 0) SetupUIElements(); UpdateExtrasButtons(0); };
+            //MenuButton btnAccTimer = new MenuButton("0-100kph Timer");
+            //btnAccTimer.Activated += delegate { wid_accTimer.Toggle(); };
+            //MenuButton btnMaxSpeed = new MenuButton("Top Speed Recorder");
+            //btnMaxSpeed.Activated += delegate { wid_maxSpeed.Toggle(); };
+            //MenuButton btnShowCredits = new MenuButton("Show Credits");
+            //btnShowCredits.Activated += ShowCredits;
+            //MenuButton btnUpdates = new MenuButton("Check for Updates");
+            //btnUpdates.Activated += CheckForUpdates;
+            //this.extrasMenuItems = new GTA.IMenuItem[] { btnRainbowMode, btnAccTimer, btnMaxSpeed, btnShowCredits, btnUpdates };
+            //this.extrasMenu = new GTA.Menu("Extras", extrasMenuItems);
+            //this.extrasMenu.HasFooter = false;
+
+            this.menuPool = new MenuPool();
+            menuPool.Add(mainMenu);
+            menuPool.Add(coreMenu);
         }
 
-        void UpdateMainButtons(int selectedIndex)
+        void UpdateAllMenuButtons()
         {
-            mainMenuItems[0].Caption = "Toggle Display: " + speedoMode.ToString();
-            ChangeMenuSelectedIndex(mainMenu, selectedIndex);
+            ((UIMenuListItem)mainMenu.MenuItems[0]).Index = (int)speedoMode;
+            ((UIMenuListItem)coreMenu.MenuItems[0]).Index = useMph ? 0 : 1;
+            ((UIMenuCheckboxItem)coreMenu.MenuItems[1]).Checked = enableSaving;
+            ((UIMenuCheckboxItem)coreMenu.MenuItems[2]).Checked = onfootSpeedo;
         }
 
-        void UpdateCoreButtons(int selectedIndex)
-        {
-            coreMenuItems[0].Caption = "Speed Unit: " + (useMph ? "Imperial" : "Metric");
-            coreMenuItems[1].Caption = "Save Trip Meter: " + (enableSaving ? "On" : "Off");
-            coreMenuItems[2].Caption = "Onfoot Speed: " + (onfootSpeedo ? "On" : "Off");
-            ChangeMenuSelectedIndex(coreMenu, selectedIndex);
-        }
+        //void UpdateDispButtons()
+        //{
+        //    dispMenuItems[0].Caption = "Vertical: " + System.Enum.GetName(typeof(VerticalAlignment), vAlign);
+        //    dispMenuItems[1].Caption = "Horizontal: " + System.Enum.GetName(typeof(HorizontalAlign), hAlign);
+        //    dispMenuItems[2].Caption = "Font Style: " + fontStyle;
+        //}
 
-        void UpdateDispButtons(int selectedIndex)
-        {
-            dispMenuItems[0].Caption = "Vertical: " + System.Enum.GetName(typeof(VerticalAlignment), vAlign);
-            dispMenuItems[1].Caption = "Horizontal: " + System.Enum.GetName(typeof(HorizontalAlign), hAlign);
-            dispMenuItems[2].Caption = "Font Style: " + fontStyle;
-            ChangeMenuSelectedIndex(dispMenu, selectedIndex);
-        }
+        //void UpdateColorButtons()
+        //{
+        //    Color color = isChangingBackcolor ? backcolor : forecolor;
+        //    colorMenu.Caption = (isChangingBackcolor ? "Back Color" : "Fore Color") 
+        //        + "\nR: " + color.R + " G: " + color.G + " B: " + color.B + " A: " + color.A;
+        //}
 
-        void UpdateColorButtons(int selectedIndex)
-        {
-            Color color = isChangingBackcolor ? backcolor : forecolor;
-            colorMenu.Caption = (isChangingBackcolor ? "Back Color" : "Fore Color") 
-                + "\nR: " + color.R + " G: " + color.G + " B: " + color.B + " A: " + color.A;
-            ChangeMenuSelectedIndex(colorMenu, selectedIndex);
-        }
+        //void UpdateExtrasButtons()
+        //{
+        //    extrasMenuItems[0].Caption = "Rainbow Mode: " + (rainbowMode == 0 ? "Off" : Math.Pow(2, rainbowMode - 1) + "x");
+        //    extrasMenuItems[1].Caption = (useMph ? "0-62 mph" : "0-100 kph") + " Timer";
+        //}
 
-        void UpdateExtrasButtons(int selectedIndex)
+        string GetTitle()
         {
-            extrasMenuItems[0].Caption = "Rainbow Mode: " + (rainbowMode == 0 ? "Off" : Math.Pow(2, rainbowMode - 1) + "x");
-            extrasMenuItems[1].Caption = (useMph ? "0-62 mph" : "0-100 kph") + " Timer";
-            ChangeMenuSelectedIndex(extrasMenu, selectedIndex);
-        }
-
-        void ChangeMenuSelectedIndex(GTA.Menu menu, int selectedIndex)
-        {
-            menu.Initialize();
-            for (int i = 0; i < selectedIndex; i++)
-                menu.OnChangeSelection(true);
+            return "Speedometer v" + SCRIPT_VERSION;
         }
 
         void LoadStats()
