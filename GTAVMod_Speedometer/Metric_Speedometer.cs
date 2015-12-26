@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
@@ -316,7 +317,7 @@ namespace GTAVMod_Speedometer
             UIMenuItem btnBack = new UIMenuItem("Save & Close");
             btnBack.Activated += delegate { SaveSettings(); mainMenu.Visible = false; };
 
-            this.mainMenu = new UIMenu(GetTitle(), "by libertylocked");
+            this.mainMenu = new UIMenu(GetTitle(), "By libertylocked");
             foreach (UIMenuItem item in new UIMenuItem[] { btnToggle, btnClear, btnCore, btnDisp, btnExtras, btnReload, btnBack })
             {
                 this.mainMenu.AddItem(item);
@@ -324,17 +325,17 @@ namespace GTAVMod_Speedometer
             this.mainMenu.OnMenuClose += delegate { SaveSettings(); };
 
             // Create core menu
-            UIMenuListItem btnUseMph = new UIMenuListItem("Speed Unit", new List<dynamic> { "Imperial", "Metric" }, 0);
+            UIMenuListItem btnUseMph = new UIMenuListItem("Speed Unit", new List<dynamic> { "Imperial", "Metric" }, 0, "Sets the unit between KPH and MPH");
             btnUseMph.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
             {
                 useMph = index % 2 == 0; UpdateAllMenuButtons();;
             });
-            UIMenuCheckboxItem btnEnableSaving = new UIMenuCheckboxItem("Save Trip Meter", false);
+            UIMenuCheckboxItem btnEnableSaving = new UIMenuCheckboxItem("Save Trip Meter", false, "Allows trip meter data to be persistent across game sessions");
             btnEnableSaving.CheckboxEvent += new ItemCheckboxEvent(delegate(UIMenuCheckboxItem item, bool selected)
             {
                 enableSaving = selected;
             });
-            UIMenuCheckboxItem btnOnfootSpeedo = new UIMenuCheckboxItem("Onfoot Speed", false);
+            UIMenuCheckboxItem btnOnfootSpeedo = new UIMenuCheckboxItem("Onfoot Speed", false, "Shows speed when player is on foot");
             btnOnfootSpeedo.CheckboxEvent += new ItemCheckboxEvent(delegate(UIMenuCheckboxItem item, bool selected)
             {
                 onfootSpeedo = selected;
@@ -347,19 +348,22 @@ namespace GTAVMod_Speedometer
             }
             mainMenu.BindMenuToItem(coreMenu, btnCore);
 
-            //// Create display menu
-            //MenuButton btnVAlign = new MenuButton("");
-            //btnVAlign.Activated += delegate { vAlign = (VerticalAlignment)(((int)vAlign + 1) % 3); posOffset.Y = 0; SetupUIElements(); UpdateDispButtons(0); };
-            //MenuButton btnHAlign = new MenuButton("");
-            //btnHAlign.Activated += delegate { hAlign = (HorizontalAlign)(((int)hAlign + 1) % 3); posOffset.X = 0; SetupUIElements(); UpdateDispButtons(1); };
-            //MenuButton btnFontStyle = new MenuButton("");
-            //btnFontStyle.Activated += delegate
-            //{
-            //    GTA.Font[] fonts = (GTA.Font[])Enum.GetValues(typeof(GTA.Font));
-            //    int currIndex = Array.IndexOf(fonts, (GTA.Font)fontStyle);
-            //    int nextIndex = (int)fonts[(currIndex + 1) % fonts.Length];
-            //    fontStyle = nextIndex; SetupUIElements(); UpdateDispButtons(2);
-            //};
+            // Create display menu
+            UIMenuListItem btnVAlign = new UIMenuListItem("Vertical Alignment", new List<dynamic>(Enum.GetNames(typeof(VerticalAlignment))), 0, "Determines how speedometer display will be aligned vertically");
+            btnVAlign.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            {
+                vAlign = (VerticalAlignment)(((int)index) % 3); posOffset.Y = 0; SetupUIElements();
+            });
+            UIMenuListItem btnHAlign = new UIMenuListItem("Horizontal Alignment", new List<dynamic>(Enum.GetNames(typeof(HorizontalAlign))), 0, "Determines how speedometer display will be aligned horizontally");
+            btnHAlign.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            {
+                hAlign = (HorizontalAlign)(((int)index) % 3); posOffset.X = 0; SetupUIElements();
+            });
+            UIMenuListItem btnFontStyle = new UIMenuListItem("Font Style", new List<dynamic>(Enum.GetNames(typeof(GTA.Font))), 0, "Sets the font on speedometer display");
+            btnFontStyle.OnListChanged += new ItemListEvent(delegate(UIMenuListItem item, int index)
+            {
+                fontStyle = (int)((GTA.Font[])Enum.GetValues(typeof(GTA.Font)))[index]; SetupUIElements();
+            });
             //MenuButton btnFontSize = new MenuButton("Font Size >");
             //btnFontSize.Activated += delegate
             //{
@@ -409,9 +413,13 @@ namespace GTAVMod_Speedometer
             //btnForecolor.Activated += delegate { isChangingBackcolor = false; View.AddMenu(colorMenu); UpdateColorButtons(0); };
             //MenuButton btnRstDefault = new MenuButton("Restore to Default");
             //btnRstDefault.Activated += delegate { ResetUIToDefault(); UpdateDispButtons(8); };
-            //this.dispMenuItems = new GTA.IMenuItem[] { btnVAlign, btnHAlign, btnFontStyle, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault };
-            //this.dispMenu = new GTA.Menu("Display Settings", dispMenuItems);
-            //this.dispMenu.HasFooter = false;
+
+            this.dispMenu = new UIMenu(GetTitle(), "Display Settings");
+            foreach (UIMenuItem item in new UIMenuItem[] { btnVAlign, btnHAlign, btnFontStyle/*, btnAplyOffset, btnFontSize, btnPanelSize, btnBackcolor, btnForecolor, btnRstDefault*/ })
+            {
+                dispMenu.AddItem(item);
+            }
+            mainMenu.BindMenuToItem(dispMenu, btnDisp);
 
             //// Create color menu
             //MenuButton btnAddR = new MenuButton("+ R");
@@ -493,6 +501,7 @@ namespace GTAVMod_Speedometer
             this.menuPool = new MenuPool();
             menuPool.Add(mainMenu);
             menuPool.Add(coreMenu);
+            menuPool.Add(dispMenu);
         }
 
         void UpdateAllMenuButtons()
@@ -501,6 +510,9 @@ namespace GTAVMod_Speedometer
             ((UIMenuListItem)coreMenu.MenuItems[0]).Index = useMph ? 0 : 1;
             ((UIMenuCheckboxItem)coreMenu.MenuItems[1]).Checked = enableSaving;
             ((UIMenuCheckboxItem)coreMenu.MenuItems[2]).Checked = onfootSpeedo;
+            ((UIMenuListItem)dispMenu.MenuItems[0]).Index = (int)vAlign;
+            ((UIMenuListItem)dispMenu.MenuItems[1]).Index = (int)hAlign;
+            ((UIMenuListItem)dispMenu.MenuItems[2]).Index = Array.IndexOf(Enum.GetValues(typeof(GTA.Font)), (GTA.Font)fontStyle);
         }
 
         //void UpdateDispButtons()
